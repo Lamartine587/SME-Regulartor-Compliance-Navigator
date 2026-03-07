@@ -39,6 +39,12 @@ def health_check():
 
 # Add this near your other imports
 from api import routes_ussd
+from api.routes_dashboard import router as dashboard_router
+from api.routes_knowledge import router as knowledge_router
+from api.routes_vault import router as vault_router
 
 # Add this where you include your other routers
 app.include_router(routes_ussd.router)
+app.include_router(dashboard_router)
+app.include_router(knowledge_router)
+app.include_router(vault_router)
