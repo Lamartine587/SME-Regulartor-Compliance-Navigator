@@ -1,0 +1,21 @@
+# Core API & Environment
+fastapi
+uvicorn
+python-dotenv
+
+# PostgreSQL (NeonDB)
+sqlalchemy
+psycopg2-binary
+
+# MongoDB
+motor
+
+# Security & Authentication (JWT & Password Hashing)
+passlib[bcrypt]
+python-jose[cryptography]
+
+# Data Validation (Needed for EmailStr in Pydantic)
+pydantic[email]
+
+# SMS Verification
+africastalking
