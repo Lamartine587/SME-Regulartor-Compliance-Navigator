@@ -19,3 +19,12 @@ pydantic[email]
 
 # SMS Verification
 africastalking
+
+# PDF Generation
+reportlab
+
+# Settings Management
+pydantic-settings
+
+# File Uploads
+python-multipart
