@@ -1,10 +1,4 @@
-This is a critical step for your academic presentation. A professional `README.md` is often the first thing lecturers look at to judge the maturity of a software project. It shows you aren't just writing code, but building a system that others can understand and maintain.
-
-Here is a professional-grade template tailored specifically to your directory structure. Save this as `README.md` in your root `group_project` folder.
-
----
-
-# Anga Systems: SME Compliance Navigator
+SME Compliance Navigator
 
 The SME Compliance Navigator is an enterprise-grade platform designed to streamline regulatory compliance for Small and Medium Enterprises (SMEs). This system features a hybrid database architecture, multi-channel authentication (Web, SMS, and USSD), and a secure document management vault.
 
@@ -121,7 +115,3 @@ When you push this to GitHub, make sure you also create a `requirements.txt` fil
 
 ```bash
 pip freeze > requirements.txt
-
-```
-
-This ensures that anyone else who clones your repo can get your exact setup with one command. Good luck with the React development—are you ready to start building the login/signup UI?
