@@ -1,5 +1,6 @@
 {
     "python.analysis.extraPaths": [
         "./group_project/backend"
-    ]
+    ],
+    "python.defaultInterpreterPath": "${workspaceFolder}/group_project/backend/.venv/bin/python"
 }
