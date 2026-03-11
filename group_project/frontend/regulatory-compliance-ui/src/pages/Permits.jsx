@@ -50,7 +50,7 @@ function Permits() {
         <Navbar />
 
         {/* Page Content */}
-        <main className="flex-1 p-6">
+        <main className="flex-1 p-6 overflow-y-auto">
 
           <h1 className="text-2xl text-center font-bold mb-6">
             Permits
@@ -115,6 +115,7 @@ function Permits() {
               </tbody>
             </table>
           </div>
+          <p></p>
 
         </main>
       </div>
