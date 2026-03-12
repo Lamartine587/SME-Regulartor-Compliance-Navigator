@@ -4,9 +4,9 @@ function Navbar() {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="bg-white border-b border-gray-200 px-8 py-4 flex justify-between items-center">
+    <div className="sticky top-0 bg-white border-b border-gray-200 px-8 py-4 lg:h-12 md:h-20 flex justify-between items-center">
       
-      <p className="pl-11 text-xl font-semibold text-slate-800">
+      <p className="pl-11 lg:text-xl md:text-md font-semibold text-slate-800">
         Monitor and manage your business permits
       </p>
 
