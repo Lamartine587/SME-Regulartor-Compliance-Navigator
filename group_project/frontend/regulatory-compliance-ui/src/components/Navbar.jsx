@@ -1,7 +1,15 @@
 import React, { useState } from "react";
+import { removeToken } from "../utils/auth";
+import { useNavigate } from "react-router-dom";
 
 function Navbar() {
   const [open, setOpen] = useState(false);
+
+  const navigate =useNavigate();
+  const handleLogout =()=>{
+    removeToken();
+    navigate("/SignIn");
+  }
 
   return (
     <div className="bg-white border-b border-gray-200 px-8 py-4 flex justify-between items-center">
@@ -33,7 +41,9 @@ function Navbar() {
               Update Profile
             </button>
 
-            <button className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-red-600">
+            <button 
+            onClick={handleLogout}
+            className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-red-600">
               Logout
             </button>
 

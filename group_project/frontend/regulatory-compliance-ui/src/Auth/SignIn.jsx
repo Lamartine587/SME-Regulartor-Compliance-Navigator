@@ -34,7 +34,7 @@ export default function SignIn() {
 
       if(data.access_token){
         saveToken(data.access_token);
-        navigate("/dashboard");
+        navigate("/Dashboard");
       } else if(data.detail && Array.isArray(data.detail) && data.detail.length > 0){
         setError(data.detail[0].msg);
       } else {

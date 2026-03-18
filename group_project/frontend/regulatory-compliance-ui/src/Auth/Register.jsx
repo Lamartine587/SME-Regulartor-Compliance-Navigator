@@ -76,6 +76,7 @@ export default function Register() {
         <h2 className="text-2xl font-bold text-center">Register</h2>
 
         <input
+        required
           type="email"
           placeholder="Email"
           value={email}
@@ -84,6 +85,7 @@ export default function Register() {
         />
 
         <input
+        required
           type="text"
           placeholder="Phone"
           value={phone}
@@ -93,6 +95,7 @@ export default function Register() {
 
         <div className="relative">
           <input
+          required
             type={showPassword ? "text" : "password"}
             placeholder="Password"
             value={password}
@@ -110,6 +113,7 @@ export default function Register() {
 
         <div className="relative" >
         <input
+        required
           type={showPassword ? "text" : "password"}
           placeholder="Confirm Password"
           value={confirmPassword}
