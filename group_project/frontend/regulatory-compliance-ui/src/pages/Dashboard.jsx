@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom";
 function Dashboard() {
   const navigate = useNavigate();
 
-  // No hardcoded values
+  
   const [summary, setSummary] = useState({});
   const [loading, setLoading] = useState(true);
 
@@ -28,7 +28,7 @@ function Dashboard() {
         );
 
         const data = await response.json();
-        setSummary(data);
+        setSummary(data || {});
       } catch (error) {
         console.error("Error fetching dashboard summary:", error);
       } finally {
@@ -38,10 +38,6 @@ function Dashboard() {
 
     fetchDashboardSummary();
   }, []);
-
-  if (loading) {
-    return <div className="p-8">Loading...</div>;
-  }
 
   return (
     <div className="flex bg-slate-50 min-h-screen">
@@ -57,25 +53,25 @@ function Dashboard() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               <DashboardCard title="Total Permits">
                 <p className="text-3xl font-bold text-blue-600">
-                  {summary.total}
+                  {loading ? "..." :summary.total}
                 </p>
               </DashboardCard>
 
               <DashboardCard title="Valid Permits">
                 <p className="text-3xl font-bold text-green-600">
-                  {summary.valid}
+                  {loading ? "..." :summary.valid}
                 </p>
               </DashboardCard>
 
               <DashboardCard title="Expiring Soon">
                 <p className="text-3xl font-bold text-orange-500">
-                  {summary.expiring}
+                  {loading ? "..." :summary.expiring}
                 </p>
               </DashboardCard>
 
               <DashboardCard title="Expired">
                 <p className="text-3xl font-bold text-red-600">
-                  {summary.expired}
+                  {loading ? "..." :summary.expired}
                 </p>
               </DashboardCard>
             </div>
@@ -83,7 +79,8 @@ function Dashboard() {
             {/* Upcoming Expiries */}
             <DashboardCard title="Upcoming Expiries">
               <div className="space-y-3">
-                {summary.upcomingExpiries?.map((permit) => (
+
+                {loading ? (<p className="text-gray-500">Loading permits...</p>) : summary.upcomingExpiries?.length>0?(  summary.upcomingExpiries?.map((permit) => (
                   <div
                     key={permit.id}
                     className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
@@ -115,12 +112,14 @@ function Dashboard() {
                       </p>
                     </div>
                   </div>
-                ))}
+                )))
+                :(<p className="text-gray-500 ">No upcoming expiries</p>)}
+              
               </div>
 
               <button
                 onClick={() => navigate("/permits")}
-                className="w-full mt-4 text-primary-600 hover:text-primary-700 font-medium py-2 text-sm"
+                className="w-full mt-4 text-blue-600 font-medium py-2 text-sm"
               >
                 View All Permits →
               </button>
