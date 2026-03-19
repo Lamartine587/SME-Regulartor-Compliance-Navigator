@@ -1,28 +1,35 @@
-// src/services/authService.js
+const BASE_URL ="http://127.0.0.1:8000"
 
 // Register a new user
 export const registerUser = async (email, phone, password) => {
-  const res = await fetch("/api/auth/register", {
+  const res = await fetch(`${BASE_URL}/api/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, phone, password }),
   });
-  return await res.json();
+  return res.json();
+
+  
 };
 
 // Login
 export const loginUser = async (email, password) => {
-  const res = await fetch("/api/auth/login", {
+  const res = await fetch(`${BASE_URL}/api/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
   });
-  return await res.json();
+  const data = await res.json();
+
+  if (data.access_token) {
+    localStorage.setItem("access_token", data.access_token);
+  }
+return data
 };
 
 // Forgot Password (send OTP)
 export const forgotPassword = async (email) => {
-  const res = await fetch("/api/auth/forgot-password", {
+  const res = await fetch(`${BASE_URL}/api/auth/forgot-password`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email }),
@@ -32,7 +39,7 @@ export const forgotPassword = async (email) => {
 
 // Verify OTP
 export const verifyOTP = async (user_id, otp_code, verification_type) => {
-  const res = await fetch("/api/auth/verify-otp", {
+  const res = await fetch(`${BASE_URL}/api/auth/verify-otp`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ user_id, otp_code, verification_type }),
@@ -42,10 +49,12 @@ export const verifyOTP = async (user_id, otp_code, verification_type) => {
 
 // Reset Password
 export const resetPassword = async (email, otp_code, new_password) => {
-  const res = await fetch("/api/auth/reset-password", {
+  const res = await fetch(`${BASE_URL}/api/auth/reset-password`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, otp_code, new_password }),
   });
+
+
   return await res.json();
 };

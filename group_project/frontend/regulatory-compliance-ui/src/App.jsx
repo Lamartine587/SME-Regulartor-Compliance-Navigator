@@ -24,18 +24,18 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="Register" element={<PublicRoute><Register /> </PublicRoute>} />
-        <Route path="SignIn" element={<PublicRoute> <SignIn /> </PublicRoute>} />
-        <Route path="ForgotPassword" element={<PublicRoute><ForgotPassword /> </PublicRoute>} />
-        <Route path="VerifyOTP" element={<PublicRoute><VerifyOTP/> </PublicRoute>} />
-        <Route path="ResetPassword" element={<PublicRoute><ResetPassword /></PublicRoute>} />
+        <Route path="/Register" element={<PublicRoute><Register /> </PublicRoute>} />
+        <Route path="/SignIn" element={<PublicRoute> <SignIn /> </PublicRoute>} />
+        <Route path="/ForgotPassword" element={<PublicRoute><ForgotPassword /> </PublicRoute>} />
+        <Route path="/VerifyOTP" element={<PublicRoute><VerifyOTP/> </PublicRoute>} />
+        <Route path="/ResetPassword" element={<PublicRoute><ResetPassword /></PublicRoute>} />
        
         
         {/*protected path*/ }
-        <Route path="/Dashboard" element={<ProtectedRoute><Dashboard/></ProtectedRoute>}/>
-        <Route path="Permits" element={<ProtectedRoute><Permits /> </ProtectedRoute>} />
-        <Route path="Documents" element={<ProtectedRoute><DocumentVault /> </ProtectedRoute>} />
-        <Route path="Reminders" element={<ProtectedRoute><Reminders /> </ProtectedRoute>} />
+        <Route path="/Dashboard" element={<Dashboard/>}/>
+        <Route path="/Permits" element={<ProtectedRoute><Permits /> </ProtectedRoute>} />
+        <Route path="/DocumentVault" element={<ProtectedRoute><DocumentVault /> </ProtectedRoute>} />
+        <Route path="/Reminders" element={<ProtectedRoute><Reminders /> </ProtectedRoute>} />
 
         {/* default redirect*/}
         <Route path="*" element={<SignIn/>}/>
