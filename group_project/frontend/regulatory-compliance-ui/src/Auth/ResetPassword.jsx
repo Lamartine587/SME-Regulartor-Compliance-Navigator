@@ -5,14 +5,21 @@ import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 
 export default function ResetPassword() {
   const navigate = useNavigate();
+  
+  // Form State
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  
+  // UI State
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showPasswordError, setShowPasswordError] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const email = sessionStorage.getItem("resetEmail");
 
+  // Password Rules validation
   const passwordRules = {
     "at least 8 characters": password.length >= 8,
     "uppercase letter": /[A-Z]/.test(password),
@@ -31,79 +38,127 @@ export default function ResetPassword() {
     e.preventDefault();
     setError("");
 
-    if (!passwordValid) return setError("Password must include: " + failedRules.join(", "));
-    if (password !== confirmPassword) return setError("Passwords do not match");
+    if (!email) {
+      return setError("Session expired. Please restart the password reset process.");
+    }
+
+    if (!passwordValid) {
+      return setError("Password must include: " + failedRules.join(", "));
+    }
+    
+    if (password !== confirmPassword) {
+      return setError("Passwords do not match.");
+    }
 
     setLoading(true);
     try {
-      const data = await resetPassword(email, "", password);
-      if (data.detail && data.detail.length > 0) setError(data.detail[0].msg);
-      else navigate("/signin");
-    } catch {
-      setError("Network error, please try again");
+      // Assuming your authService expects (email, old_password, new_password)
+      const data = await resetPassword(email, "", password); 
+      
+      if (data?.detail && Array.isArray(data.detail) && data.detail.length > 0) {
+        setError(data.detail[0].msg || "Password reset failed.");
+      } else {
+        // Success: Clean up session storage and route to login
+        sessionStorage.removeItem("resetEmail");
+        navigate("/login"); // Updated to match the route defined in App.jsx
+      }
+    } catch (err) {
+      setError("Network error, please try again.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <form onSubmit={handleSubmit} className="bg-white p-8 rounded-xl shadow-md w-96 space-y-4">
-        <h2 className="text-2xl font-bold text-center">Reset Password</h2>
-
-        <div className="relative">
-          <input
-            type={showPassword ? "text" : "password"}
-            placeholder="New Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-400"
-          />
-          <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-2 text-sm text-gray-500"
-          >
-            {showPassword ? (<EyeSlashIcon className="h-5 w-5"/>) :(<EyeIcon className="h-5 w-5"/>)}
-          </button>
-        </div>
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 to-indigo-900 p-4">
       
-      <div className="relative">
-        <input
-          type={showPassword ? "text" :"password"}
-          placeholder="Confirm New Password"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          /*disabled={!passwordValid}
-          className={`w-full border p-2 rounded focus:ring-2 focus:ring-blue-400 ${
-            !passwordValid ? "bg-gray-100 cursor-not-allowed" : ""
-          }`}*/
-        /> 
-        <button 
-        type="button"
-        onClick={()=>setShowPassword(!showPassword)}
-        className="absolute right-3 top-2 text-sm text-gray-500">
-          {showPassword ? <EyeSlashIcon className="h-5 w-5" /> :<EyeIcon className="h-5 w-5"/>}
-        </button>
-       </div>
+      <form onSubmit={handleSubmit} className="bg-white p-10 rounded-2xl shadow-2xl w-full max-w-md space-y-6">
+        
+        <div className="text-center space-y-2 mb-8">
+          <h2 className="text-3xl font-extrabold text-gray-900">New Password</h2>
+          <p className="text-sm text-gray-500">Secure your SME Compliance Navigator account</p>
+        </div>
 
+        <div className="space-y-4">
+          {/* New Password Field */}
+          <div className="relative">
+            <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+            <input
+              required
+              type={showPassword ? "text" : "password"}
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors outline-none bg-gray-50 pr-10"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-9 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              {showPassword ? (<EyeSlashIcon className="h-5 w-5"/>) : (<EyeIcon className="h-5 w-5"/>)}
+            </button>
+          </div>
+        
+          {/* Confirm Password Field */}
+          <div className="relative">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
+            <input
+              required
+              type={showConfirmPassword ? "text" : "password"}
+              placeholder="••••••••"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              onFocus={() => setShowPasswordError(true)}
+              disabled={!passwordValid}
+              className={`w-full border p-3 rounded-lg outline-none pr-10 transition-colors ${
+                !passwordValid 
+                  ? "bg-gray-100 border-gray-200 cursor-not-allowed text-gray-400" 
+                  : "bg-gray-50 border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              }`}
+            /> 
+            <button 
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              disabled={!passwordValid}
+              className="absolute right-3 top-9 text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
+            >
+              {showConfirmPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5"/>}
+            </button>
+          </div>
+        </div>
 
-        {password && !passwordValid && (
-          <div className="bg-red-100 text-red-700 p-2 rounded text-center text-sm">
-            Password must include: {failedRules.join(", ")}
+        {/* Live Password Rules Feedback */}
+        {password && !passwordValid && showPasswordError && (
+          <div className="bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded-lg text-sm">
+            <span className="font-semibold block mb-1">Password must include:</span>
+            <ul className="list-disc pl-5 space-y-1">
+              {failedRules.map((rule, index) => (
+                <li key={index}>{rule}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* General Error Message */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-center text-sm font-medium">
+            {error}
           </div>
         )}
 
         <button
           type="submit"
-          disabled={loading}
-          className={`w-full p-2 rounded text-white ${
-            loading ? "bg-gray-400 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600"
+          disabled={loading || !passwordValid}
+          className={`w-full p-3 rounded-lg text-white font-semibold tracking-wide transition-all ${
+            loading || !passwordValid
+              ? "bg-indigo-300 cursor-not-allowed" 
+              : "bg-indigo-600 hover:bg-indigo-700 shadow-md hover:shadow-lg active:scale-[0.98]"
           }`}
         >
           {loading ? "Resetting..." : "Reset Password"}
         </button>
 
-        {error && <div className="bg-red-100 text-red-700 p-2 rounded text-center text-sm">{error}</div>}
       </form>
     </div>
   );

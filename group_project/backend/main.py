@@ -4,6 +4,10 @@ from fastapi.middleware.cors import CORSMiddleware
 # Import your database configurations and routers based on your specific tree structure
 from db.neon_session import engine, Base
 from api.routes_auth import router as auth_router
+from api import routes_ussd
+from api.routes_dashboard import router as dashboard_router
+from api.routes_knowledge import router as knowledge_router
+from api.routes_vault import router as vault_router
 
 # 1. Automatically create the NeonDB tables on startup
 # (If the 'users' table doesn't exist yet, SQLAlchemy will create it now)
@@ -26,25 +30,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 4. Register the Authentication Router
-app.include_router(auth_router)
+# 4. Register the Routers
+# Prefixes removed here because they are already defined inside the individual route files
+app.include_router(auth_router, tags=["Auth"])
+app.include_router(dashboard_router, tags=["Dashboard"])
+app.include_router(knowledge_router, tags=["Knowledge"])
+app.include_router(routes_ussd.router, tags=["USSD"])
+app.include_router(vault_router, tags=["Vault"])
 
-# 5. Root Health Check Endpoint
-@app.get("/", tags=["Health"])
+# 5. API Health Check Endpoint 
+@app.get("/api/health", tags=["Health"])
 def health_check():
     return {
         "status": "online",
         "message": "The API is running successfully. Ready for frontend connections!"
     }
 
-# Add this near your other imports
-from api import routes_ussd
-from api.routes_dashboard import router as dashboard_router
-from api.routes_knowledge import router as knowledge_router
-from api.routes_vault import router as vault_router
-
-# Add this where you include your other routers
-app.include_router(routes_ussd.router)
-app.include_router(dashboard_router)
-app.include_router(knowledge_router)
-app.include_router(vault_router)
+# Keeping the root endpoint as a fallback
+@app.get("/", tags=["Root"])
+def root_check():
+    return {"message": "Welcome to the SME Regulatory Compliance API"}
