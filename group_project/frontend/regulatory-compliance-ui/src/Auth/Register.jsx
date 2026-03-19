@@ -49,6 +49,7 @@ export default function Register() {
     
     if(!passwordValid){
       setError("Passsword must include:" + failedRules.join(", "));
+      return;
     }
 
     if (password !== confirmPassword) {
@@ -59,16 +60,20 @@ export default function Register() {
     setLoading(true);
     try {
       const data = await registerUser(email, phone, password);
-      if (data.detail && Array.isArray(data.detail) && data.detail.length > 0) {
-        setError(data.detail[0].msg);
-      } else {
-        navigate("/signin");
-      }
-    } catch (err) {
-      setError("Network error, please try again");
+     if (data?.detail) {
+      setError(data.detail[0]?.msg || "Registration failed");
+      return;
     }
+
+    // success
+    navigate("/signin");
+
+  } catch (err) {
+  setError(err.message || "Network error, please try again");
+}finally {
     setLoading(false);
-  };
+  }
+};
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">

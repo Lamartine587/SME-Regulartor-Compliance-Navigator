@@ -1,5 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { removeToken } from "../utils/auth";
 
 function Sidebar() {
   const location = useLocation();
@@ -13,6 +15,13 @@ function Sidebar() {
   ];
 
   const isActive = (path) => location.pathname === path;
+
+  const navigate= useNavigate();
+  const handleLogout=()=>{
+    removeToken();
+    navigate("/SignIn");
+  }
+
 
   return (
     <>
@@ -74,7 +83,9 @@ function Sidebar() {
             <button className="w-full px-4 py-2 text-sm text-gray-600 hover:text-gray-800 text-left rounded-lg hover:bg-gray-50">
               Settings
             </button>
-            <button className="w-full px-4 py-2 text-sm text-red-600 hover:text-red-800 text-left rounded-lg hover:bg-red-50 mt-1">
+            <button 
+            onClick={handleLogout}
+            className="w-full px-4 py-2 text-sm text-red-600 hover:text-red-800 text-left rounded-lg hover:bg-red-50 mt-1">
               Logout
             </button>
           </div>
