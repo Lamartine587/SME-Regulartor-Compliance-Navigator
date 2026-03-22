@@ -18,18 +18,20 @@ export default function Sidebar() {
   const navigate = useNavigate();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
+  // FIXED: Capitalized routes to perfectly match App.jsx
   const menuItems = [
-    { path: "/dashboard", label: "Dashboard", icon: HomeIcon },
-    { path: "/permits", label: "Permits", icon: ClipboardDocumentCheckIcon },
-    { path: "/vault", label: "Document Vault", icon: FolderIcon },
-    { path: "/reminders", label: "Reminders", icon: BellIcon },
+    { path: "/Dashboard", label: "Dashboard", icon: HomeIcon },
+    { path: "/Permits", label: "Permits", icon: ClipboardDocumentCheckIcon },
+    { path: "/DocumentVault", label: "Document Vault", icon: FolderIcon },
+    { path: "/Reminders", label: "Reminders", icon: BellIcon },
   ];
 
   const isActive = (path) => location.pathname === path;
 
   const handleLogout = () => {
     removeToken();
-    navigate("/login");
+    // FIXED: Pointing to the correct Sign In route
+    navigate("/SignIn");
   };
 
   return (

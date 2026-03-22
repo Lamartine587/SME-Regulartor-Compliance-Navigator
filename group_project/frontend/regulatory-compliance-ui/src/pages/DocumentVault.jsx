@@ -7,7 +7,8 @@ import {
   TrashIcon, 
   EyeIcon,
   CheckCircleIcon,
-  ExclamationCircleIcon
+  ExclamationCircleIcon,
+  ArrowPathIcon
 } from "@heroicons/react/24/outline";
 
 export default function DocumentVault() {
@@ -18,21 +19,21 @@ export default function DocumentVault() {
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState({ text: "", type: "" });
 
-  const token = localStorage.getItem("access_token"); // Updated Key
-  const API_BASE = "http://localhost:8000/api/vault/documents"; // Updated Port
+  const token = localStorage.getItem("access_token");
+  const API_BASE = "http://localhost:8000/api/vault/documents";
 
-  // Fetch documents from backend
+  // 1. Fetch documents (Matches your backend's List Response)
   const fetchDocuments = async () => {
     setLoading(true);
     try {
       const response = await fetch(API_BASE, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!response.ok) throw new Error("Failed to fetch documents");
+      if (!response.ok) throw new Error("Could not load documents");
       const data = await response.json();
-      setDocuments(Array.isArray(data) ? data : data.documents || []);
+      setDocuments(data); // FastAPI returns a list [doc, doc]
     } catch (error) {
-      console.error("Error fetching documents:", error);
+      console.error("Vault Fetch Error:", error);
     } finally {
       setLoading(false);
     }
@@ -42,7 +43,7 @@ export default function DocumentVault() {
     fetchDocuments();
   }, []);
 
-  // Drag and Drop Logic
+  // 2. Drag & Drop Logic
   const handleDrag = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -58,45 +59,52 @@ export default function DocumentVault() {
     }
   };
 
-  const removeSelectedFile = (index) => {
-    setSelectedFiles(selectedFiles.filter((_, i) => i !== index));
-  };
-
-  // Upload Logic
+  // 3. Fixed Upload Logic (Squashes the 422 Error)
   const handleUpload = async () => {
     if (selectedFiles.length === 0) return;
 
     setUploading(true);
     setMessage({ text: "", type: "" });
     
-    const formData = new FormData();
-    selectedFiles.forEach((file) => {
-      // 'files' must match the parameter name in your FastAPI endpoint
-      formData.append("files", file); 
-    });
-
     try {
-      const response = await fetch(API_BASE, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        // IMPORTANT: Do NOT set Content-Type header when sending FormData
-        body: formData,
-      });
+      // Loop through each file because backend handles one at a time
+      for (const file of selectedFiles) {
+        const formData = new FormData();
+        
+        // CRITICAL: These keys must match your Python FastAPI arguments exactly
+        formData.append("file", file); // Backend expects 'file: UploadFile'
+        formData.append("title", file.name); // Backend expects 'title: str'
+        formData.append("document_type", "Compliance Certificate"); // Backend expects 'document_type: str'
+        formData.append("issuing_authority", "Self Uploaded");
 
-      if (!response.ok) throw new Error("Upload failed");
+        const response = await fetch(API_BASE, {
+          method: "POST",
+          headers: { 
+            Authorization: `Bearer ${token}` 
+            // Note: Content-Type is NOT set manually. Browser does it for FormData.
+          },
+          body: formData,
+        });
 
-      setMessage({ text: "Documents uploaded successfully!", type: "success" });
+        if (!response.ok) {
+          const errorDetail = await response.json();
+          console.error("FastAPI 422/500 Detail:", errorDetail);
+          throw new Error(`Failed to upload ${file.name}`);
+        }
+      }
+
+      setMessage({ text: "Vault updated successfully!", type: "success" });
       setSelectedFiles([]);
-      fetchDocuments(); // Refresh list
+      fetchDocuments(); // Refresh the list from DB
     } catch (error) {
-      setMessage({ text: "Failed to upload files. Check backend logs.", type: "error" });
+      setMessage({ text: error.message || "Upload failed. Check console.", type: "error" });
     } finally {
       setUploading(false);
     }
   };
 
   return (
-    <div className="flex h-screen bg-slate-50 font-sans">
+    <div className="flex bg-slate-100 min-h-screen font-sans">
       <Sidebar />
 
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
@@ -105,43 +113,52 @@ export default function DocumentVault() {
         <main className="flex-1 overflow-y-auto p-6 lg:p-10">
           <div className="max-w-5xl mx-auto space-y-8">
             
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900">Document Vault</h1>
-              <p className="text-slate-500 mt-1">Securely store and manage your business compliance certificates.</p>
+            <div className="flex justify-between items-end">
+              <div>
+                <h1 className="text-3xl font-black text-slate-900">Document Vault</h1>
+                <p className="text-slate-500 font-medium mt-1">Encrypted storage for your regulatory certificates.</p>
+              </div>
+              <button onClick={fetchDocuments} className="p-2 text-slate-400 hover:text-indigo-600 transition-colors">
+                <ArrowPathIcon className={`h-5 w-5 ${loading ? "animate-spin" : ""}`} />
+              </button>
             </div>
 
-            {/* Upload Zone */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+            {/* Drag & Drop Upload Zone */}
+            <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-200/50 p-8">
               <div
                 onDragEnter={handleDrag}
                 onDragLeave={handleDrag}
                 onDragOver={handleDrag}
                 onDrop={handleDrop}
-                className={`relative border-2 border-dashed rounded-xl p-10 transition-all duration-200 flex flex-col items-center justify-center ${
-                  dragActive ? "border-indigo-500 bg-indigo-50 scale-[1.01]" : "border-slate-300 bg-slate-50"
+                className={`relative border-2 border-dashed rounded-2xl p-10 transition-all duration-300 flex flex-col items-center justify-center ${
+                  dragActive ? "border-indigo-500 bg-indigo-50/50 scale-[1.01]" : "border-slate-200 bg-slate-50/50"
                 }`}
               >
-                <CloudArrowUpIcon className={`h-12 w-12 mb-4 ${dragActive ? "text-indigo-600" : "text-slate-400"}`} />
-                <p className="text-slate-600 font-medium">Drag & drop files here, or click to browse</p>
-                <p className="text-slate-400 text-sm mt-1">PDF, PNG, JPG (Max 10MB each)</p>
+                <CloudArrowUpIcon className={`h-12 w-12 mb-4 ${dragActive ? "text-indigo-600" : "text-slate-300"}`} />
+                <p className="text-slate-600 font-bold">Drag & drop files here, or click to browse</p>
+                <p className="text-slate-400 text-xs mt-1 uppercase tracking-widest font-bold">PDF, PNG, JPG up to 10MB</p>
 
                 <label className="absolute inset-0 w-full h-full cursor-pointer">
-                  <input type="file" className="hidden" multiple onChange={(e) => setSelectedFiles([...selectedFiles, ...Array.from(e.target.files)])} />
+                  <input 
+                    type="file" 
+                    className="hidden" 
+                    multiple 
+                    onChange={(e) => setSelectedFiles([...selectedFiles, ...Array.from(e.target.files)])} 
+                  />
                 </label>
               </div>
 
-              {/* Selection List */}
+              {/* Selection Summary */}
               {selectedFiles.length > 0 && (
-                <div className="mt-6 space-y-3">
-                  <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">Ready to upload</h3>
+                <div className="mt-8 space-y-3 animate-in fade-in slide-in-from-bottom-2">
+                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Queue</h3>
                   {selectedFiles.map((file, i) => (
-                    <div key={i} className="flex items-center justify-between bg-white border border-slate-100 p-3 rounded-lg shadow-sm">
+                    <div key={i} className="flex items-center justify-between bg-slate-50 border border-slate-100 p-4 rounded-xl">
                       <div className="flex items-center space-x-3">
                         <DocumentIcon className="h-5 w-5 text-indigo-500" />
-                        <span className="text-sm font-medium text-slate-700 truncate max-w-[200px]">{file.name}</span>
-                        <span className="text-xs text-slate-400">({(file.size / 1024 / 1024).toFixed(2)} MB)</span>
+                        <span className="text-sm font-bold text-slate-700 truncate max-w-[250px]">{file.name}</span>
                       </div>
-                      <button onClick={() => removeSelectedFile(i)} className="text-slate-400 hover:text-rose-500 transition-colors">
+                      <button onClick={() => setSelectedFiles(selectedFiles.filter((_, idx) => idx !== i))} className="text-slate-300 hover:text-rose-500 transition-colors">
                         <TrashIcon className="h-5 w-5" />
                       </button>
                     </div>
@@ -149,60 +166,62 @@ export default function DocumentVault() {
                   <button
                     onClick={handleUpload}
                     disabled={uploading}
-                    className="w-full mt-4 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-md shadow-indigo-100 disabled:bg-slate-300"
+                    className="w-full mt-6 bg-indigo-600 text-white py-4 rounded-2xl font-black hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 disabled:bg-slate-300 active:scale-[0.98]"
                   >
-                    {uploading ? "Uploading..." : `Upload ${selectedFiles.length} File(s)`}
+                    {uploading ? "Uploading to Vault..." : `Securely Upload ${selectedFiles.length} File(s)`}
                   </button>
                 </div>
               )}
 
               {message.text && (
-                <div className={`mt-4 p-4 rounded-xl flex items-center text-sm font-medium ${message.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
-                  {message.type === 'success' ? <CheckCircleIcon className="h-5 w-5 mr-2" /> : <ExclamationCircleIcon className="h-5 w-5 mr-2" />}
+                <div className={`mt-6 p-4 rounded-2xl flex items-center text-sm font-bold ${message.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-rose-50 text-rose-700 border border-rose-100'}`}>
+                  {message.type === 'success' ? <CheckCircleIcon className="h-5 w-5 mr-3" /> : <ExclamationCircleIcon className="h-5 w-5 mr-3" />}
                   {message.text}
                 </div>
               )}
             </div>
 
-            {/* Stored Documents List */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                <h2 className="text-lg font-bold text-slate-800">Stored Documents</h2>
-                <span className="text-xs font-bold px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-slate-500">
-                  {documents.length} Total
+            {/* Database Stored Files */}
+            <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-200/50 overflow-hidden">
+              <div className="px-8 py-6 border-b border-slate-50 flex justify-between items-center bg-slate-50/30">
+                <h2 className="text-lg font-black text-slate-800">Your Records</h2>
+                <span className="text-[10px] font-black px-3 py-1 bg-white border border-slate-200 rounded-full text-slate-400 uppercase tracking-widest">
+                  {documents.length} Files
                 </span>
               </div>
 
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-slate-50">
                 {loading ? (
-                  <div className="p-10 text-center animate-pulse text-slate-400">Loading your vault...</div>
+                  <div className="p-20 text-center text-slate-300 font-bold italic animate-pulse">Synchronizing with Vault...</div>
                 ) : documents.length === 0 ? (
-                  <div className="p-16 text-center">
-                    <DocumentIcon className="h-12 w-12 text-slate-200 mx-auto mb-3" />
-                    <p className="text-slate-500 font-medium">Your vault is empty</p>
-                    <p className="text-slate-400 text-sm">Upload compliance documents to track them here.</p>
+                  <div className="p-20 text-center">
+                    <div className="bg-slate-50 w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                       <DocumentIcon className="h-10 w-10 text-slate-200" />
+                    </div>
+                    <p className="text-slate-900 font-black">No documents found.</p>
+                    <p className="text-slate-400 text-sm mt-1">Your compliance files will appear here once uploaded.</p>
                   </div>
                 ) : (
                   documents.map((doc) => (
-                    <div key={doc.id} className="flex items-center justify-between p-5 hover:bg-slate-50 transition-colors group">
-                      <div className="flex items-center space-x-4">
-                        <div className="p-2 bg-indigo-50 rounded-lg group-hover:bg-indigo-100 transition-colors">
-                          <DocumentIcon className="h-6 w-6 text-indigo-600" />
+                    <div key={doc.id} className="flex items-center justify-between p-6 hover:bg-slate-50/50 transition-colors group">
+                      <div className="flex items-center space-x-5">
+                        <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-500 transition-all">
+                          <DocumentIcon className="h-6 w-6" />
                         </div>
                         <div>
-                          <p className="font-semibold text-slate-800 group-hover:text-indigo-600 transition-colors">{doc.name}</p>
-                          <p className="text-xs text-slate-400 uppercase font-bold tracking-tighter">{doc.size || "Unknown Size"}</p>
+                          <p className="font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">{doc.title}</p>
+                          <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-0.5">{doc.document_type}</p>
                         </div>
                       </div>
 
                       <a
-                        href={`${API_BASE}/${doc.id}`}
+                        href={`http://localhost:8000/${doc.file_path}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="flex items-center space-x-1 text-indigo-600 hover:text-indigo-800 text-sm font-bold bg-indigo-50 px-4 py-2 rounded-lg transition-all"
+                        className="flex items-center space-x-2 text-indigo-600 hover:text-white hover:bg-indigo-600 text-xs font-black bg-indigo-50 px-5 py-2.5 rounded-xl transition-all"
                       >
                         <EyeIcon className="h-4 w-4" />
-                        <span>View</span>
+                        <span>VIEW</span>
                       </a>
                     </div>
                   ))

@@ -1,4 +1,4 @@
-const BASE_URL ="http://127.0.0.1:8000"
+const BASE_URL = "http://127.0.0.1:8000";
 
 // Register a new user
 export const registerUser = async (email, phone, password) => {
@@ -20,17 +20,15 @@ export const loginUser = async (email, password) => {
   
   const data = await res.json();
 
-  // If the backend threw an error (like a 403 or 401)
+  // If the backend threw an error (like a 401, 403, 404)
   if (!res.ok) {
-    console.error("🚨 FASTAPI ERROR DETAIL:", data.detail); // <--- This will tell us everything
-    return { detail: data.detail || "Login failed. Please check your credentials." };
-  }
-
-  // Success
-  if (data.access_token) {
-    localStorage.setItem("access_token", data.access_token);
+    console.error("🚨 FASTAPI ERROR DETAIL:", data.detail); 
+    // Throwing an error forces the catch block in SignIn.jsx to trigger
+    const errorMessage = Array.isArray(data.detail) ? data.detail[0]?.msg : data.detail;
+    throw new Error(errorMessage || "Login failed. Please check your credentials.");
   }
   
+  // Return the pure data object to SignIn.jsx
   return data;
 };
 
@@ -61,6 +59,5 @@ export const resetPassword = async (email, otp_code, new_password) => {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, otp_code, new_password }),
   });
-
   return await res.json();
 };

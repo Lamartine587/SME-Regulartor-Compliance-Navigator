@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { removeToken } from "../utils/auth";
 import { 
-  UserCircleIcon, 
   ChevronDownIcon, 
   ArrowRightOnRectangleIcon, 
   UserIcon, 
@@ -18,7 +17,8 @@ export default function Navbar() {
   // Handle Logout
   const handleLogout = () => {
     removeToken();
-    navigate("/login"); // Pointing to the correct lowercase route
+    // FIXED: Changed from "/login" to "/SignIn" to match App.jsx
+    navigate("/SignIn"); 
   };
 
   // Close dropdown when clicking outside
@@ -47,7 +47,7 @@ export default function Navbar() {
       {/* Right side: Actions & Profile */}
       <div className="flex items-center space-x-4 ml-auto">
         
-        {/* Notifications Icon (Visual placeholder) */}
+        {/* Notifications Icon */}
         <button className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all relative">
           <BellIcon className="h-6 w-6" />
           <span className="absolute top-2 right-2.5 h-2 w-2 bg-rose-500 rounded-full border-2 border-white"></span>
@@ -61,14 +61,14 @@ export default function Navbar() {
               isOpen ? "bg-slate-50 border-slate-200 shadow-sm" : "border-transparent hover:bg-slate-50"
             }`}
           >
-            {/* User Avatar with Initials */}
+            {/* User Avatar with Initials (Don Kipkoech) */}
             <div className="w-9 h-9 bg-gradient-to-tr from-indigo-600 to-indigo-500 text-white rounded-xl flex items-center justify-center text-sm font-bold shadow-md shadow-indigo-200">
-              LK
+              DK
             </div>
             
             <div className="hidden lg:block text-left">
-              <p className="text-xs font-bold text-slate-900 leading-none mb-0.5">Lamartine K.</p>
-              <p className="text-[10px] font-medium text-slate-400 uppercase tracking-tighter">Business Owner</p>
+              <p className="text-xs font-bold text-slate-900 leading-none mb-0.5">Don Kipkoech</p>
+              <p className="text-[10px] font-medium text-slate-400 uppercase tracking-tighter">IT Administrator</p>
             </div>
 
             <ChevronDownIcon className={`h-4 w-4 text-slate-400 transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`} />

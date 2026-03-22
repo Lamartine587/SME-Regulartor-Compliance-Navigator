@@ -35,7 +35,8 @@ export default function SignIn() {
       // FastAPI OAuth2 endpoint typically returns access_token
       if (data?.access_token) {
         saveToken(data.access_token);
-        navigate("/dashboard"); 
+        // FIXED: Capital 'D' to match App.jsx
+        navigate("/Dashboard"); 
       } else if (data?.detail) {
         // Handle both string errors (HTTPException) and array errors (Validation)
         const errorMessage = Array.isArray(data.detail) ? data.detail[0]?.msg : data.detail;
@@ -52,8 +53,6 @@ export default function SignIn() {
 
   const handleGoogleSignIn = () => {
     // TODO: Wire this to your FastAPI Google OAuth endpoint
-    // Typically, this looks like redirecting the user to your backend:
-    // window.location.href = "http://localhost:8000/api/auth/google/login";
     console.log("Initiating Google Sign-In flow...");
   };
 
@@ -83,8 +82,9 @@ export default function SignIn() {
           <div className="relative">
             <div className="flex justify-between items-center mb-1">
               <label className="block text-sm font-medium text-gray-700">Password</label>
+              {/* FIXED: Capitalized route to match App.jsx */}
               <Link 
-                to="/forgot-password" 
+                to="/ForgotPassword" 
                 className="text-xs font-semibold text-indigo-600 hover:underline"
                 tabIndex="-1"
               >
@@ -153,7 +153,8 @@ export default function SignIn() {
 
         <p className="text-center text-sm text-gray-600 mt-6 pt-4 border-t border-gray-100">
           Don't have an account?{" "}
-          <Link to="/register" className="text-indigo-600 font-semibold hover:underline">
+          {/* FIXED: Capitalized route to match App.jsx */}
+          <Link to="/Register" className="text-indigo-600 font-semibold hover:underline">
             Register here
           </Link>
         </p>

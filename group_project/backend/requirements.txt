@@ -28,3 +28,15 @@ pydantic-settings
 
 # File Uploads
 python-multipart
+
+# Async HTTP client for Featherless AI calls
+httpx
+
+# Modern Email handling for FastAPI
+fastapi-mail
+
+# Background Task Scheduling (The Watchman)
+apscheduler
+
+# OpenAI-compatible SDK (Featherless uses this format)
+openai

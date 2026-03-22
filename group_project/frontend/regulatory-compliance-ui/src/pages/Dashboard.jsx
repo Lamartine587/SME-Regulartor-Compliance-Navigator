@@ -8,7 +8,8 @@ import {
   CheckCircleIcon, 
   ExclamationTriangleIcon, 
   XCircleIcon,
-  ArrowRightIcon
+  ArrowRightIcon,
+  ArrowPathIcon
 } from "@heroicons/react/24/outline";
 
 export default function Dashboard() {
@@ -23,48 +24,44 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    async function fetchDashboardSummary() {
-      try {
-        // MATCHING THE KEY FROM authService.js
-        const token = localStorage.getItem("access_token"); 
+  const fetchDashboardSummary = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("access_token"); 
 
-        if (!token) {
+      if (!token) {
+        navigate("/login");
+        return;
+      }
+
+      const response = await fetch("http://localhost:8000/api/dashboard/summary", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem("access_token");
           navigate("/login");
           return;
         }
-
-        // HITTING THE CORRECT FASTAPI PORT (8000)
-        const response = await fetch(
-          "http://localhost:8000/api/dashboard/summary",
-          {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        if (!response.ok) {
-          if (response.status === 401) {
-            localStorage.removeItem("access_token");
-            navigate("/login");
-            throw new Error("Session expired. Please log in again.");
-          }
-          throw new Error(`Failed to load data (Status: ${response.status})`);
-        }
-
-        const data = await response.json();
-        setSummary(data || {});
-      } catch (err) {
-        console.error("Error fetching dashboard summary:", err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
+        throw new Error("Could not load dashboard data.");
       }
-    }
 
+      const data = await response.json();
+      setSummary(data);
+    } catch (err) {
+      console.error("Dashboard Fetch Error:", err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchDashboardSummary();
   }, [navigate]);
 
@@ -80,14 +77,20 @@ export default function Dashboard() {
             
             <div className="flex justify-between items-end">
               <div>
-                <h1 className="text-2xl font-bold text-slate-900">Dashboard Overview</h1>
-                <p className="text-sm text-slate-500 mt-1">Track and manage your SME compliance status.</p>
+                <h1 className="text-3xl font-black text-slate-900">Dashboard Overview</h1>
+                <p className="text-sm font-medium text-slate-500 mt-1">Live compliance monitoring for Anga Systems.</p>
               </div>
+              <button 
+                onClick={fetchDashboardSummary}
+                className="p-2 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-indigo-600 transition-all shadow-sm"
+              >
+                <ArrowPathIcon className={`h-5 w-5 ${loading ? "animate-spin" : ""}`} />
+              </button>
             </div>
 
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl text-sm font-medium flex items-center">
-                <ExclamationTriangleIcon className="h-5 w-5 mr-2" />
+              <div className="bg-rose-50 border border-rose-200 text-rose-700 p-4 rounded-2xl text-sm font-bold flex items-center">
+                <ExclamationTriangleIcon className="h-5 w-5 mr-3" />
                 {error}
               </div>
             )}
@@ -96,12 +99,8 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               <DashboardCard title="Total Permits">
                 <div className="flex items-center justify-between mt-2">
-                  {loading ? (
-                    <div className="h-10 w-16 bg-slate-200 animate-pulse rounded"></div>
-                  ) : (
-                    <p className="text-4xl font-extrabold text-blue-600">{summary.total || 0}</p>
-                  )}
-                  <div className="p-3 bg-blue-50 rounded-xl text-blue-500">
+                  <p className="text-4xl font-black text-indigo-600">{summary.total}</p>
+                  <div className="p-3 bg-indigo-50 rounded-2xl text-indigo-500">
                     <DocumentTextIcon className="h-6 w-6" />
                   </div>
                 </div>
@@ -109,12 +108,8 @@ export default function Dashboard() {
 
               <DashboardCard title="Valid Permits">
                 <div className="flex items-center justify-between mt-2">
-                  {loading ? (
-                    <div className="h-10 w-16 bg-slate-200 animate-pulse rounded"></div>
-                  ) : (
-                    <p className="text-4xl font-extrabold text-emerald-600">{summary.valid || 0}</p>
-                  )}
-                  <div className="p-3 bg-emerald-50 rounded-xl text-emerald-500">
+                  <p className="text-4xl font-black text-emerald-600">{summary.valid}</p>
+                  <div className="p-3 bg-emerald-50 rounded-2xl text-emerald-500">
                     <CheckCircleIcon className="h-6 w-6" />
                   </div>
                 </div>
@@ -122,12 +117,8 @@ export default function Dashboard() {
 
               <DashboardCard title="Expiring Soon">
                 <div className="flex items-center justify-between mt-2">
-                  {loading ? (
-                    <div className="h-10 w-16 bg-slate-200 animate-pulse rounded"></div>
-                  ) : (
-                    <p className="text-4xl font-extrabold text-amber-500">{summary.expiring || 0}</p>
-                  )}
-                  <div className="p-3 bg-amber-50 rounded-xl text-amber-500">
+                  <p className="text-4xl font-black text-amber-500">{summary.expiring}</p>
+                  <div className="p-3 bg-amber-50 rounded-2xl text-amber-500">
                     <ExclamationTriangleIcon className="h-6 w-6" />
                   </div>
                 </div>
@@ -135,12 +126,8 @@ export default function Dashboard() {
 
               <DashboardCard title="Expired">
                 <div className="flex items-center justify-between mt-2">
-                  {loading ? (
-                    <div className="h-10 w-16 bg-slate-200 animate-pulse rounded"></div>
-                  ) : (
-                    <p className="text-4xl font-extrabold text-rose-600">{summary.expired || 0}</p>
-                  )}
-                  <div className="p-3 bg-rose-50 rounded-xl text-rose-500">
+                  <p className="text-4xl font-black text-rose-600">{summary.expired}</p>
+                  <div className="p-3 bg-rose-50 rounded-2xl text-rose-500">
                     <XCircleIcon className="h-6 w-6" />
                   </div>
                 </div>
@@ -148,74 +135,68 @@ export default function Dashboard() {
             </div>
 
             {/* Upcoming Expiries List */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-              <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center">
-                <h3 className="font-bold text-slate-800 text-lg">Upcoming Expiries</h3>
-                <span className="text-xs font-semibold bg-slate-100 text-slate-600 px-3 py-1 rounded-full">
+            <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
+              <div className="px-8 py-6 border-b border-slate-50 flex justify-between items-center bg-slate-50/30">
+                <h3 className="font-black text-slate-800 text-lg uppercase tracking-tight">Upcoming Expiries</h3>
+                <span className="text-[10px] font-black bg-white border border-slate-200 text-slate-400 px-3 py-1 rounded-full uppercase tracking-widest">
                   Action Required
                 </span>
               </div>
               
-              <div className="p-6">
+              <div className="p-8">
                 <div className="space-y-4">
                   {loading ? (
-                    // Loading Skeleton
-                    [1, 2, 3].map((i) => (
-                      <div key={i} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl animate-pulse">
-                        <div className="space-y-2">
-                          <div className="h-4 w-48 bg-slate-200 rounded"></div>
-                          <div className="h-3 w-32 bg-slate-200 rounded"></div>
-                        </div>
-                        <div className="h-6 w-24 bg-slate-200 rounded-full"></div>
-                      </div>
+                    [1, 2].map((i) => (
+                      <div key={i} className="h-20 bg-slate-50 animate-pulse rounded-2xl"></div>
                     ))
                   ) : summary.upcomingExpiries?.length > 0 ? (
-                    // Render Active Data
                     summary.upcomingExpiries.map((permit) => (
                       <div
                         key={permit.id}
-                        className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-xl hover:bg-slate-100 hover:shadow-sm transition-all duration-200 group"
+                        className="flex flex-col sm:flex-row sm:items-center justify-between p-6 bg-slate-50/50 border border-slate-100 rounded-2xl hover:bg-white hover:shadow-lg hover:shadow-slate-100 transition-all duration-300 group"
                       >
-                        <div className="flex-1 mb-2 sm:mb-0">
-                          <h4 className="font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
-                            {permit.name}
+                        <div className="flex-1 mb-4 sm:mb-0">
+                          {/* MAPPING FIX: Use title and issuing_authority */}
+                          <h4 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                            {permit.title}
                           </h4>
-                          <p className="text-sm text-slate-500 flex items-center mt-1">
-                            {permit.authority}
+                          <p className="text-xs font-black text-slate-400 uppercase tracking-widest mt-1">
+                            {permit.issuing_authority}
                           </p>
                         </div>
 
                         <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center">
-                          <p className="text-sm font-medium text-slate-700">
-                            Expires: {permit.expiryDate}
+                          <p className="text-xs font-bold text-slate-500 mb-1">
+                            Expires: <span className="font-mono text-slate-900">{permit.expiry_date}</span>
                           </p>
                           <span
-                            className={`mt-1 text-xs font-bold px-2.5 py-1 rounded-md ${
-                              permit.daysLeft <= 30
-                                ? "bg-rose-100 text-rose-700 border border-rose-200"
-                                : permit.daysLeft <= 60
-                                ? "bg-amber-100 text-amber-700 border border-amber-200"
-                                : "bg-emerald-100 text-emerald-700 border border-emerald-200"
+                            className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-tighter border ${
+                              permit.days_left <= 7
+                                ? "bg-rose-50 text-rose-700 border-rose-100"
+                                : permit.days_left <= 30
+                                ? "bg-amber-50 text-amber-700 border-amber-100"
+                                : "bg-emerald-50 text-emerald-700 border-emerald-100"
                             }`}
                           >
-                            {permit.daysLeft} days left
+                            {permit.days_left} days remaining
                           </span>
                         </div>
                       </div>
                     ))
                   ) : (
-                    // Empty State
-                    <div className="text-center py-10">
-                      <CheckCircleIcon className="h-12 w-12 text-emerald-400 mx-auto mb-3" />
-                      <p className="text-slate-900 font-medium">You're all set!</p>
-                      <p className="text-sm text-slate-500 mt-1">No permits are expiring in the next 90 days.</p>
+                    <div className="text-center py-16">
+                      <div className="bg-emerald-50 w-16 h-16 rounded-3xl flex items-center justify-center mx-auto mb-4">
+                        <CheckCircleIcon className="h-8 w-8 text-emerald-500" />
+                      </div>
+                      <p className="text-slate-900 font-black">All Clear!</p>
+                      <p className="text-sm text-slate-400 mt-1 font-medium">No documents are expiring in the next 90 days.</p>
                     </div>
                   )}
                 </div>
 
                 <button
-                  onClick={() => navigate("/permits")}
-                  className="w-full mt-6 flex items-center justify-center py-3 text-sm font-semibold text-blue-600 bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors"
+                  onClick={() => navigate("/Permits")}
+                  className="w-full mt-8 flex items-center justify-center py-4 text-xs font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 rounded-2xl hover:bg-indigo-600 hover:text-white transition-all duration-300"
                 >
                   Manage All Permits
                   <ArrowRightIcon className="h-4 w-4 ml-2" />
