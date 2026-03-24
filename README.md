@@ -30,17 +30,98 @@ The SME Compliance Navigator is an enterprise-grade platform designed to streaml
 ## 📂 Project Structure
 
 ```text
-group_project/
-├── backend/            # FastAPI Application
-│   ├── api/            # API Endpoints (Auth, USSD, Vault, etc.)
-│   ├── core/           # Security & Config logic
-│   ├── db/             # Database connection pools
-│   ├── models/         # Database schemas/models
-│   ├── schemas/        # Pydantic validation models
-│   └── services/       # Business logic (Auth, Email, SMS)
-└── frontend/           # React application
-    └── app.jsx
-
+SME-Regulartor-Compliance-Navigator/
+├── README.md
+├── group_project/
+│   ├── backend/                    # FastAPI Application
+│   │   ├── main.py                 # Main application entry point
+│   │   ├── requirements.txt        # Python dependencies
+│   │   ├── __pycache__/            # Python cache files
+│   │   ├── api/                    # API Endpoints
+│   │   │   ├── __init__.py
+│   │   │   ├── routes_auth.py      # Authentication routes
+│   │   │   ├── routes_dashboard.py # Dashboard routes
+│   │   │   ├── routes_knowledge.py # Knowledge base routes
+│   │   │   ├── routes_ussd.py      # USSD routes
+│   │   │   ├── routes_vault.py     # Document vault routes
+│   │   │   └── __pycache__/
+│   │   ├── core/                   # Core functionality
+│   │   │   ├── __init__.py
+│   │   │   ├── compliance_engine.py # Compliance logic
+│   │   │   ├── config.py           # Configuration settings
+│   │   │   ├── deps.py             # Dependencies
+│   │   │   ├── scheduler.py        # Task scheduler
+│   │   │   ├── security.py         # Security utilities
+│   │   │   └── __pycache__/
+│   │   ├── db/                     # Database connections
+│   │   │   ├── __init__.py
+│   │   │   ├── mongo_session.py    # MongoDB session
+│   │   │   ├── neon_session.py     # NeonDB session
+│   │   │   └── __pycache__/
+│   │   ├── models/                 # Database models
+│   │   │   ├── __init__.py
+│   │   │   ├── document_model.py   # Document models
+│   │   │   ├── otp_model.py        # OTP models
+│   │   │   ├── user_model.py       # User models
+│   │   │   └── __pycache__/
+│   │   ├── schemas/                # Pydantic schemas
+│   │   │   ├── __init__.py
+│   │   │   ├── auth_schema.py      # Auth schemas
+│   │   │   ├── dashboard_schema.py # Dashboard schemas
+│   │   │   ├── document_schema.py  # Document schemas
+│   │   │   ├── knowledge_schema.py # Knowledge schemas
+│   │   │   └── __pycache__/
+│   │   ├── services/               # Business logic services
+│   │   │   ├── __init__.py
+│   │   │   ├── auth_service.py     # Authentication service
+│   │   │   ├── email_service.py    # Email service
+│   │   │   ├── knowledge_service.py # Knowledge service
+│   │   │   ├── sms_service.py      # SMS service
+│   │   │   └── __pycache__/
+│   │   └── uploads/                # File uploads
+│   │       └── documents/          # Document storage
+│   └── frontend/                   # Frontend applications
+│       └── regulatory-compliance-ui/ # React application
+│           ├── eslint.config.js    # ESLint configuration
+│           ├── index.html          # Main HTML file
+│           ├── package.json        # Node.js dependencies
+│           ├── postcss.config.js   # PostCSS configuration
+│           ├── README.md           # Frontend README
+│           ├── tailwind.config.js  # Tailwind CSS config
+│           ├── vite.config.js      # Vite configuration
+│           ├── public/             # Public assets
+│           └── src/                # Source code
+│               ├── App.jsx         # Main App component
+│               ├── index.css       # Global styles
+│               ├── main.jsx        # Entry point
+│               ├── assets/         # Static assets
+│               ├── Auth/           # Authentication components
+│               │   ├── ForgotPassword.jsx
+│               │   ├── Register.jsx
+│               │   ├── ResetPassword.jsx
+│               │   ├── SignIn.jsx
+│               │   └── VerifyOTP.jsx
+│               ├── components/     # Reusable components
+│               │   ├── DashboardCard.jsx
+│               │   ├── Navbar.jsx
+│               │   └── Sidebar.jsx
+│               ├── pages/          # Page components
+│               │   ├── Dashboard.jsx
+│               │   ├── DocumentVault.jsx
+│               │   ├── LandingPage.jsx
+│               │   ├── Permits.jsx
+│               │   └── Reminders.jsx
+│               ├── routes/         # Routing components
+│               │   ├── ProtectedRoute.jsx
+│               │   └── PublicRoute.jsx
+│               ├── services/       # API services
+│               │   └── authService.js
+│               └── utils/          # Utility functions
+│                   ├── api.js
+│                   └── auth.js
+└── testenvirons/                   # Test environment
+    ├── generate_test_permits.py    # Test permit generator
+    └── test_docs/                  # Test documents
 ```
 
 ---
