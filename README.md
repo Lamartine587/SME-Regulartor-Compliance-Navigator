@@ -61,7 +61,14 @@ Clone the repository and install backend dependencies:
 ```bash
 git clone <your-repository-url>
 cd group_project/backend
+#load python virtual environment
+python3 -m venv venv
+#activate it
+source venv/bin/activate
 pip install -r requirements.txt
+#Run the app
+#main is the main file_name, reload for re-run every time you make changes
+uvicorn main:app --reload
 
 ```
 
@@ -84,7 +91,7 @@ SMTP_PASSWORD=your_password
 **Backend:**
 
 ```bash
-cd backend
+cd group_project/backend
 uvicorn main:app --reload
 
 ```
@@ -94,7 +101,8 @@ uvicorn main:app --reload
 **Frontend:**
 
 ```bash
-cd frontend
+cd group_project/frontend/regulatoru-compliance-ui
+#install the dependencies necessary
 npm install
 npm start
 
