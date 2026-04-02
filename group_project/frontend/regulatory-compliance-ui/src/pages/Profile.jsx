@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { verifyOTP, requestPhoneOTP } from "../services/authService";
 import { getProfile, updateProfile } from "../services/profileService";
 import Navbar from "../components/Navbar";
-import Sidebar from "../components/Sidebar"; // Imported and now integrated below
+import Sidebar from "../components/Sidebar";
 
 const KENYAN_COUNTIES = [
   "Baringo", "Bomet", "Bungoma", "Busia", "Elgeyo-Marakwet", "Embu", "Garissa", 
@@ -14,6 +14,13 @@ const KENYAN_COUNTIES = [
   "Trans Nzoia", "Turkana", "Uasin Gishu", "Vihiga", "Wajir", "West Pokot"
 ];
 
+const BUSINESS_TYPES = [
+  "Retail & Wholesale", "Agribusiness & Farming", "ICT & Tech Solutions",
+  "Manufacturing", "Hospitality & Catering", "Healthcare & Pharmacy",
+  "Professional Services (Law/Accounting)", "Transport & Logistics",
+  "Construction & Real Estate", "Beauty & Personal Care", "Education", "Other"
+];
+
 export default function Profile() {
   const [smsOtp, setSmsOtp] = useState("");
   const [otpError, setOtpError] = useState("");
@@ -23,15 +30,9 @@ export default function Profile() {
   const userId = localStorage.getItem("user_id"); 
 
   const [profileData, setProfileData] = useState({
-    first_name: "",
-    last_name: "",
-    phone: "",
-    is_phone_verified: false,
-    role_title: "",
-    business_name: "",
-    registration_number: "",
-    industry: "",
-    county_location: ""
+    email: "", // Display only
+    first_name: "", last_name: "", phone: "", is_phone_verified: false,
+    role_title: "", business_name: "", registration_number: "", industry: "", county_location: ""
   });
 
   const [isSaving, setIsSaving] = useState(false);
@@ -42,19 +43,9 @@ export default function Profile() {
     const fetchProfile = async () => {
       try {
         const data = await getProfile();
-        setProfileData({
-          first_name: data.first_name || "",
-          last_name: data.last_name || "",
-          phone: data.phone || "",
-          is_phone_verified: data.is_phone_verified || false,
-          role_title: data.role_title || "",
-          business_name: data.business_name || "",
-          registration_number: data.registration_number || "",
-          industry: data.industry || "",
-          county_location: data.county_location || ""
-        });
+        setProfileData({ ...data });
       } catch (error) {
-        console.error("Error loading profile:", error);
+        console.error("Profile load error:", error);
       } finally {
         setIsLoading(false);
       }
@@ -62,13 +53,36 @@ export default function Profile() {
     fetchProfile();
   }, []);
 
+  // --- Strict Input Sanitization ---
+  
+  // 1. Name Sanitization (No numbers allowed)
+  const handleNameChange = (e) => {
+    const { name, value } = e.target;
+    // Replace anything that is NOT a letter or a space
+    const sanitizedValue = value.replace(/[^a-zA-Z\s]/g, "");
+    setProfileData({ ...profileData, [name]: sanitizedValue });
+  };
+
+  // 2. Phone Gatekeeper (+254 format, max 13 chars)
+  const handlePhoneChange = (e) => {
+    let val = e.target.value;
+    if (val && !val.startsWith("+")) val = "+" + val;
+    const cleanVal = val.charAt(0) + val.slice(1).replace(/\D/g, "");
+    if (cleanVal.length <= 13) {
+      setProfileData({ ...profileData, phone: cleanVal });
+    }
+  };
+
+  // 3. Generic Change (for Business/PIN)
+  const handleChange = (e) => {
+    setProfileData({ ...profileData, [e.target.name]: e.target.value });
+  };
+
   const handleRequestNewOTP = async () => {
-    setIsRequesting(true);
-    setOtpError("");
-    setOtpSuccess("");
+    setIsRequesting(true); setOtpError(""); setOtpSuccess("");
     try {
       await requestPhoneOTP();
-      setOtpSuccess("A new code has been sent to your phone!");
+      setOtpSuccess("A new code has been sent!");
     } catch (err) {
       setOtpError(err.message);
     } finally {
@@ -79,16 +93,15 @@ export default function Profile() {
   const handleVerifyPhone = async (e) => {
     e.preventDefault();
     setOtpError(""); setOtpSuccess("");
-    if (!smsOtp) return setOtpError("Please enter the 6-digit code.");
-    
+    if (!smsOtp) return setOtpError("Enter the code.");
     setIsVerifying(true);
     try {
       await verifyOTP({ user_id: parseInt(userId), verification_type: "sms", otp_code: smsOtp });
-      setOtpSuccess("Phone number successfully verified!");
+      setOtpSuccess("Verified!");
       setProfileData({ ...profileData, is_phone_verified: true });
       setSmsOtp(""); 
     } catch (err) {
-      setOtpError(err.message || "Invalid code. Please try again.");
+      setOtpError(err.message || "Invalid code.");
     } finally {
       setIsVerifying(false);
     }
@@ -96,179 +109,161 @@ export default function Profile() {
 
   const handleProfileUpdate = async (e) => {
     e.preventDefault();
-    setIsSaving(true);
-    setSaveMessage({ type: "", text: "" });
+    
+    // Final Validation Check
+    if (!profileData.first_name || !profileData.last_name || !profileData.phone) {
+      return setSaveMessage({ type: "error", text: "Please fill all required fields." });
+    }
+
+    setIsSaving(true); setSaveMessage({ type: "", text: "" });
     try {
       const updated = await updateProfile(profileData);
       setProfileData(updated);
-      setSaveMessage({ type: "success", text: "Profile & Phone updated!" });
+      setSaveMessage({ type: "success", text: "Settings Updated!" });
       setTimeout(() => setSaveMessage({ type: "", text: "" }), 3000);
     } catch (error) {
-      setSaveMessage({ type: "error", text: error.message || "Failed to update profile." });
+      setSaveMessage({ type: "error", text: "Update Failed." });
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleChange = (e) => {
-    setProfileData({ ...profileData, [e.target.name]: e.target.value });
-  };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center font-bold text-slate-600">
-        Syncing Profile Data...
-      </div>
-    );
-  }
+  if (isLoading) return <div className="min-h-screen bg-slate-50 flex items-center justify-center font-black text-slate-400 uppercase text-xs tracking-widest">Syncing Data...</div>;
 
   return (
     <div className="flex bg-slate-50 min-h-screen font-sans">
-      {/* 1. Sidebar is placed here on the left */}
       <Sidebar />
-
-      {/* 2. Main content area on the right */}
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
         <Navbar />
-
-        {/* 3. The scrollable form container */}
         <main className="flex-1 overflow-y-auto p-6 lg:p-10">
           <div className="max-w-4xl mx-auto space-y-8">
-            <div>
-              <h1 className="text-3xl font-black text-slate-900 tracking-tight">Account Settings</h1>
-              <p className="text-sm font-medium text-slate-500 mt-1">Configure your professional identity and business details.</p>
+            <div className="flex justify-between items-end">
+              <div>
+                <h1 className="text-3xl font-black text-slate-900 tracking-tight">Account Settings</h1>
+                <p className="text-sm font-medium text-slate-500 mt-1">Manage your professional and business identity.</p>
+              </div>
             </div>
 
-            {/* PROFILE FORM SECTION */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="px-6 py-5 border-b border-slate-200 bg-slate-50/50">
-                <h3 className="text-lg font-bold text-slate-900">Professional Identity</h3>
-              </div>
-              
-              <form onSubmit={handleProfileUpdate} className="p-6 space-y-6">
+              <form onSubmit={handleProfileUpdate} className="p-8 space-y-8">
+                
+                {/* PERSONAL DETAILS SECTION */}
                 <div>
-                  <h4 className="text-xs font-black text-indigo-600 uppercase tracking-widest mb-4">Personal Details</h4>
+                  <h4 className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-6 border-l-4 border-indigo-600 pl-3">Personal Details</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">First Name</label>
-                      <input type="text" name="first_name" value={profileData.first_name} onChange={handleChange} className="w-full border border-slate-300 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium" />
+                    
+                    {/* Read-Only Email Field */}
+                    <div className="md:col-span-2">
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Registered Email (Not Editable)</label>
+                      <input 
+                        type="email" 
+                        value={profileData.email} 
+                        readOnly 
+                        className="w-full border border-slate-200 p-3 rounded-xl bg-slate-100 text-slate-500 text-sm font-medium cursor-not-allowed outline-none" 
+                      />
                     </div>
+
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Last Name</label>
-                      <input type="text" name="last_name" value={profileData.last_name} onChange={handleChange} className="w-full border border-slate-300 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium" />
+                      <label className="block text-[10px] font-black text-slate-700 uppercase tracking-widest mb-1">First Name</label>
+                      <input 
+                        type="text" 
+                        name="first_name" 
+                        placeholder="e.g. John"
+                        value={profileData.first_name} 
+                        onChange={handleNameChange} 
+                        className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium" 
+                      />
                     </div>
-                    <div className="md:col-span-1">
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Phone Number</label>
+
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-700 uppercase tracking-widest mb-1">Last Name</label>
+                      <input 
+                        type="text" 
+                        name="last_name" 
+                        placeholder="e.g. Doe"
+                        value={profileData.last_name} 
+                        onChange={handleNameChange} 
+                        className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium" 
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-700 uppercase tracking-widest mb-1">Phone Number <span className="text-indigo-600 lowercase font-bold">(+254 format)</span></label>
                       <div className="relative">
-                        <input type="text" name="phone" value={profileData.phone} onChange={handleChange} className="w-full border border-slate-300 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium" />
-                        <span className={`absolute right-3 top-2.5 px-2 py-1 rounded-lg text-[10px] font-black uppercase ${profileData.is_phone_verified ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                        <input type="tel" name="phone" value={profileData.phone} onChange={handlePhoneChange} className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-mono font-bold tracking-wider" />
+                        <span className={`absolute right-3 top-2.5 px-2 py-1 rounded-lg text-[9px] font-black uppercase ${profileData.is_phone_verified ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
                           {profileData.is_phone_verified ? "Verified" : "Unverified"}
                         </span>
                       </div>
                     </div>
-                    <div className="md:col-span-1">
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Role / Job Title</label>
-                      <input type="text" name="role_title" value={profileData.role_title} onChange={handleChange} className="w-full border border-slate-300 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium" placeholder="e.g. Director" />
+
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-700 uppercase tracking-widest mb-1">Job Title</label>
+                      <input type="text" name="role_title" value={profileData.role_title} onChange={handleChange} className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium" />
                     </div>
                   </div>
                 </div>
 
-                <hr className="border-slate-100" />
-
+                {/* BUSINESS INFORMATION SECTION */}
                 <div>
-                  <h4 className="text-xs font-black text-indigo-600 uppercase tracking-widest mb-4">Business Information</h4>
+                  <h4 className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-6 border-l-4 border-indigo-600 pl-3">Business Information</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Business Name</label>
-                      <input type="text" name="business_name" value={profileData.business_name} onChange={handleChange} className="w-full border border-slate-300 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium" />
+                      <label className="block text-[10px] font-black text-slate-700 uppercase tracking-widest mb-1">Business Name</label>
+                      <input type="text" name="business_name" value={profileData.business_name} onChange={handleChange} className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium" />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Registration No. / PIN</label>
-                      <input type="text" name="registration_number" value={profileData.registration_number} onChange={handleChange} className="w-full border border-slate-300 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium" />
+                      <label className="block text-[10px] font-black text-slate-700 uppercase tracking-widest mb-1">KRA PIN / Reg No.</label>
+                      <input type="text" name="registration_number" value={profileData.registration_number} onChange={handleChange} className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium" />
                     </div>
-                    
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Industry Type</label>
-                      <select name="industry" value={profileData.industry} onChange={handleChange} className="w-full border border-slate-300 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium">
-                        <option value="">Select Industry...</option>
-                        <option value="Retail / Small Shop">Retail / Small Shop</option>
-                        <option value="Agribusiness & Farming">Agribusiness & Farming</option>
-                        <option value="Fast Food & Catering">Fast Food & Catering</option>
-                        <option value="Beauty, Salon & Spa">Beauty, Salon & Spa</option>
-                        <option value="Construction & Hardware">Construction & Hardware</option>
-                        <option value="ICT & Cyber Cafe">ICT & Cyber Cafe</option>
-                        <option value="Transport & Logistics">Transport & Logistics</option>
-                        <option value="Healthcare & Pharmacy">Healthcare & Pharmacy</option>
-                        <option value="Other">Other</option>
+                      <label className="block text-[10px] font-black text-slate-700 uppercase tracking-widest mb-1">Type of Business (Industry)</label>
+                      <select name="industry" value={profileData.industry} onChange={handleChange} className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium cursor-pointer">
+                        <option value="">Select Category...</option>
+                        {BUSINESS_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
                       </select>
                     </div>
-
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">County Location</label>
-                      <select name="county_location" value={profileData.county_location} onChange={handleChange} className="w-full border border-slate-300 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium">
+                      <label className="block text-[10px] font-black text-slate-700 uppercase tracking-widest mb-1">County of Operation</label>
+                      <select name="county_location" value={profileData.county_location} onChange={handleChange} className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium cursor-pointer">
                         <option value="">Select County...</option>
-                        {KENYAN_COUNTIES.map(county => (
-                          <option key={county} value={county}>{county}</option>
-                        ))}
+                        {KENYAN_COUNTIES.map(c => <option key={c} value={c}>{c}</option>)}
                       </select>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-4">
+                <div className="flex items-center justify-between pt-6 border-t border-slate-100">
                   <div className="h-5">
-                    {saveMessage.text && (
-                      <span className={`text-xs font-black uppercase tracking-tighter ${saveMessage.type === 'error' ? 'text-rose-600' : 'text-emerald-600'}`}>
-                        {saveMessage.text}
-                      </span>
-                    )}
+                    {saveMessage.text && <span className={`text-[10px] font-black uppercase ${saveMessage.type === 'error' ? 'text-rose-600' : 'text-emerald-600'}`}>{saveMessage.text}</span>}
                   </div>
-                  <button type="submit" disabled={isSaving} className={`px-8 py-3 rounded-xl text-white text-xs font-black uppercase tracking-widest transition-all ${isSaving ? 'bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-100'}`}>
-                    {isSaving ? "Syncing..." : "Update Details"}
+                  <button type="submit" disabled={isSaving} className={`px-10 py-3 rounded-xl text-white text-[10px] font-black uppercase tracking-widest shadow-lg transition-all ${isSaving ? 'bg-indigo-300' : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-100'}`}>
+                    {isSaving ? "Syncing..." : "Update Profile"}
                   </button>
                 </div>
               </form>
             </div>
 
-            {/* VERIFICATION DRAWER */}
+            {/* VERIFICATION SECTION */}
             {!profileData.is_phone_verified && (
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden animate-in fade-in slide-in-from-bottom-4">
-                <div className="px-6 py-5 border-b border-slate-200 bg-amber-50/50 flex justify-between items-center">
-                  <h3 className="text-lg font-bold text-amber-900">Security Verification</h3>
-                  <button 
-                    type="button"
-                    onClick={handleRequestNewOTP}
-                    disabled={isRequesting}
-                    className="text-[10px] font-black uppercase tracking-widest text-amber-700 hover:text-amber-900 bg-white border border-amber-200 px-3 py-1 rounded-lg transition-all disabled:opacity-50"
-                  >
-                    {isRequesting ? "Sending..." : "Request New Code"}
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-8 space-y-6 animate-pulse">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="text-sm font-black text-amber-900 uppercase tracking-widest">Phone Verification Required</h3>
+                    <p className="text-xs text-amber-700 font-medium">Verify your phone to enable automated KRA/County SMS alerts.</p>
+                  </div>
+                  <button onClick={handleRequestNewOTP} disabled={isRequesting} className="px-4 py-2 bg-white border border-amber-200 rounded-lg text-[10px] font-black uppercase text-amber-700 hover:bg-amber-100 transition-all">
+                    {isRequesting ? "Sending..." : "Request OTP"}
                   </button>
                 </div>
-                <div className="p-6">
-                  <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6">
-                    <h4 className="text-xs font-bold text-amber-900 uppercase tracking-widest">Verify {profileData.phone}</h4>
-                    <p className="text-xs text-amber-700 mt-1 mb-4 font-medium">Enter the SMS code to enable automated compliance alerts.</p>
-                    <form onSubmit={handleVerifyPhone} className="sm:flex sm:items-center gap-3">
-                      <input 
-                        type="text" 
-                        placeholder="000000" 
-                        maxLength="6" 
-                        value={smsOtp} 
-                        onChange={(e) => setSmsOtp(e.target.value.replace(/\D/g, ''))} 
-                        className="w-full sm:max-w-[180px] border border-amber-300 p-3 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none tracking-[0.5em] font-mono text-center bg-white text-sm" 
-                      />
-                      <button 
-                        type="submit" 
-                        disabled={!smsOtp || isVerifying} 
-                        className="mt-3 w-full sm:mt-0 sm:w-auto px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest bg-amber-600 text-white hover:bg-amber-700 transition-all disabled:bg-amber-300"
-                      >
-                        {isVerifying ? "Verifying..." : "Confirm Code"}
-                      </button>
-                    </form>
-                    {otpError && <div className="mt-3 text-rose-600 text-[10px] font-black uppercase tracking-tighter">{otpError}</div>}
-                    {otpSuccess && <div className="mt-3 text-emerald-600 text-[10px] font-black uppercase tracking-tighter">{otpSuccess}</div>}
-                  </div>
-                </div>
+
+                <form onSubmit={handleVerifyPhone} className="flex gap-3 max-w-sm">
+                  <input type="text" placeholder="000000" maxLength="6" value={smsOtp} onChange={(e) => setSmsOtp(e.target.value.replace(/\D/g, ''))} className="flex-1 border border-amber-300 p-3 rounded-xl outline-none text-center font-mono font-bold tracking-[0.5em] text-sm bg-white" />
+                  <button type="submit" disabled={!smsOtp || isVerifying} className="px-6 py-3 bg-amber-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-700 shadow-lg shadow-amber-100">
+                    {isVerifying ? "..." : "Verify Number"}
+                  </button>
+                </form>
+                {(otpError || otpSuccess) && <p className={`text-[10px] font-black uppercase ${otpError ? 'text-rose-600' : 'text-emerald-600'}`}>{otpError || otpSuccess}</p>}
               </div>
             )}
           </div>

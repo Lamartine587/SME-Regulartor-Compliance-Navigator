@@ -18,7 +18,16 @@ export default function Register() {
   const [showPasswordError, setShowPasswordError] = useState(false);
 
   const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  const validatePhone = (phone) => /^\d{10,15}$/.test(phone);
+  const validatePhone = (phone) => /^\+254\d{9}$/.test(phone);
+
+  const handlePhoneChange = (e) => {
+    let val = e.target.value;
+    if (val && !val.startsWith("+")) val = "+" + val;
+    const cleanVal = val.charAt(0) + val.slice(1).replace(/\D/g, "");
+    if (cleanVal.length <= 13) {
+      setPhone(cleanVal);
+    }
+  };
 
   const passwordRules = {
     "at least 8 characters": password.length >= 8,
@@ -39,14 +48,13 @@ export default function Register() {
     setError("");
 
     if (!validateEmail(email)) return setError("Please enter a valid email address.");
-    if (!validatePhone(phone)) return setError("Please enter a valid phone number (10-15 digits).");
+    if (!validatePhone(phone)) return setError("Phone must be exactly +254 and 9 digits (e.g., +254711222333).");
     if (!passwordValid) return setError("Password must include: " + failedRules.join(", "));
     if (password !== confirmPassword) return setError("Passwords do not match.");
 
     setLoading(true);
     try {
       const data = await registerUser(email, phone, password);
-      // Route perfectly to the Verify OTP page and carry the ID!
       navigate("/verify-otp", { state: { email: email, userId: data.user_id } });
     } catch (err) {
       setError(err.message || "Network error, please try again.");
@@ -56,57 +64,67 @@ export default function Register() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 to-indigo-900 p-4">
-      <form onSubmit={handleSubmit} className="bg-white p-10 rounded-2xl shadow-2xl w-full max-w-md space-y-6">
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 to-indigo-900 p-4 font-sans">
+      <form onSubmit={handleSubmit} className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md space-y-5">
         
-        <div className="text-center space-y-2 mb-8">
-          <h2 className="text-3xl font-extrabold text-gray-900">Create Account</h2>
-          <p className="text-sm text-gray-500">Join the SME Regulatory Compliance Navigator</p>
+        <div className="text-center space-y-1 mb-6">
+          <h2 className="text-2xl font-black text-slate-900 tracking-tight">Create Account</h2>
+          <p className="text-xs text-slate-500 font-medium">SME Regulatory Compliance Navigator</p>
         </div>
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-            <input required type="email" placeholder="you@company.com" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-gray-50" />
+            <label className="block text-[10px] font-black text-slate-700 uppercase tracking-widest mb-1">Email Address</label>
+            <input required type="email" placeholder="manager@sme.co.ke" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm" />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-            <input required type="text" placeholder="07XX XXX XXX" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-gray-50" />
+            <label className="block text-[10px] font-black text-slate-700 uppercase tracking-widest mb-1">
+              Phone Number <span className="text-indigo-600 lowercase font-bold">(+254 format)</span>
+            </label>
+            <input 
+              required 
+              type="tel" 
+              placeholder="+2547XXXXXXXX" 
+              value={phone} 
+              onChange={handlePhoneChange} 
+              className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-mono font-bold tracking-wider" 
+            />
+            <p className="text-[9px] text-slate-400 mt-1 italic font-medium text-center">Required for SMS: +254 followed by 9 digits.</p>
           </div>
 
           <div className="relative">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-            <input required type={showPassword ? "text" : "password"} placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-gray-50 pr-10" />
-            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-9 text-gray-400 hover:text-gray-600">
-              {showPassword ? (<EyeSlashIcon className="h-5 w-5"/>) : (<EyeIcon className ="h-5 w-5"/>)}
+            <label className="block text-[10px] font-black text-slate-700 uppercase tracking-widest mb-1">Password</label>
+            <input required type={showPassword ? "text" : "password"} placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 pr-10 text-sm" />
+            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-8 text-slate-400">
+              {showPassword ? <EyeSlashIcon className="h-4 w-4"/> : <EyeIcon className ="h-4 w-4"/>}
             </button>
           </div>
 
           <div className="relative">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
-            <input required type={showConfirmPassword ? "text" : "password"} placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} onFocus={() => setShowPasswordError(true)} disabled={!passwordValid} className={`w-full border p-3 rounded-lg outline-none pr-10 ${!passwordValid ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-gray-50 focus:ring-2 focus:ring-indigo-500"}`} />
-            <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} disabled={!passwordValid} className="absolute right-3 top-9 text-gray-400 hover:text-gray-600 disabled:opacity-50">
-              {showConfirmPassword ? (<EyeSlashIcon className="h-5 w-5"/>) : (<EyeIcon className ="h-5 w-5"/>)}
+            <label className="block text-[10px] font-black text-slate-700 uppercase tracking-widest mb-1">Confirm Password</label>
+            <input required type={showConfirmPassword ? "text" : "password"} placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} onFocus={() => setShowPasswordError(true)} disabled={!passwordValid} className={`w-full border p-3 rounded-xl outline-none pr-10 text-sm ${!passwordValid ? "bg-slate-100 text-slate-400 cursor-not-allowed" : "bg-slate-50 focus:ring-2 focus:ring-indigo-500 border-slate-200"}`} />
+            <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} disabled={!passwordValid} className="absolute right-3 top-8 text-slate-400">
+              {showConfirmPassword ? <EyeSlashIcon className="h-4 w-4"/> : <EyeIcon className ="h-4 w-4"/>}
             </button>
           </div>
         </div>
 
         {password && !passwordValid && showPasswordError && (
-          <div className="bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded-lg text-sm">
-            <span className="font-semibold block mb-1">Password must include:</span>
-            <ul className="list-disc pl-5 space-y-1">{failedRules.map((r, i) => <li key={i}>{r}</li>)}</ul>
+          <div className="bg-amber-50 border border-amber-200 text-amber-900 p-3 rounded-xl text-[10px] font-medium">
+            <span className="font-black uppercase tracking-tighter block mb-1">Security Standards:</span>
+            <ul className="list-disc pl-4 space-y-0.5">{failedRules.map((r, i) => <li key={i}>{r}</li>)}</ul>
           </div>
         )}
 
-        {error && <div className="bg-red-50 text-red-700 p-3 rounded-lg text-center text-sm font-medium">{error}</div>}
+        {error && <div className="bg-rose-50 text-rose-700 p-3 rounded-xl text-center text-[10px] font-black uppercase tracking-tight border border-rose-100">{error}</div>}
 
-        <button type="submit" disabled={loading} className={`w-full p-3 rounded-lg text-white font-semibold transition-all ${loading ? "bg-indigo-400 cursor-wait" : "bg-indigo-600 hover:bg-indigo-700"}`}>
-          {loading ? "Creating Account..." : "Register"}
+        <button type="submit" disabled={loading} className={`w-full p-4 rounded-xl text-white text-xs font-black uppercase tracking-widest transition-all shadow-md ${loading ? "bg-indigo-400" : "bg-indigo-600 hover:bg-indigo-700"}`}>
+          {loading ? "Creating Profile..." : "Create Account"}
         </button>
 
-        <p className="text-center text-sm text-gray-600 mt-4">
-          Already have an account? <button type="button" onClick={() => navigate('/login')} className="text-indigo-600 font-semibold hover:underline">Sign in here</button>
+        <p className="text-center text-[11px] text-slate-500 font-medium">
+          Already have an account? <button type="button" onClick={() => navigate('/login')} className="text-indigo-600 font-black hover:underline">Sign In</button>
         </p>
 
       </form>
