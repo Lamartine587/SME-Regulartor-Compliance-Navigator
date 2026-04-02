@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from motor.motor_asyncio import AsyncIOMotorClient
 from sqlalchemy.orm import Session
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig
+from devsms import DevSMSClient
 
 from core.config import settings
 from models.document_model import ComplianceDocument
@@ -106,28 +107,22 @@ class ComplianceEngine:
 
             if phone:
                 if phone.startswith("0"):
-                    formatted_phone = "254" + phone[1:]
-                elif phone.startswith("+"):
-                    formatted_phone = phone[1:]
+                    formatted_phone = "+254" + phone[1:]
+                elif not phone.startswith("+"):
+                    formatted_phone = "+" + phone
                 else:
                     formatted_phone = phone
 
                 sms_text = f"SME Nav: {doc.title} scanned. Valid until {doc.expiry_date}. Check your dashboard."
                 
-                sms_payload = {
-                    "api_key": settings.DEVTEXT_API_KEY,
-                    "to": formatted_phone,
-                    "message": sms_text,
-                    "from": settings.DEVTEXT_SENDER_ID
-                }
+                sms_client = DevSMSClient(api_key=settings.DEVTEXT_API_KEY)
+                sms_response = sms_client.send(
+                    to=formatted_phone,
+                    message=sms_text
+                )
                 
-                async with httpx.AsyncClient() as client:
-                    sms_response = await client.post(
-                        settings.DEVTEXT_BASE_URL, 
-                        json=sms_payload, 
-                        timeout=10.0
-                    )
-                    sms_response.raise_for_status()
+                if sms_response.status != "success":
+                    print(f"⚠️ SMS Delivery failed: {sms_response.status}")
 
         except Exception as e:
             print(f"⚠️ Notification error: {e}")

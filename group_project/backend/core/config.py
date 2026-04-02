@@ -16,7 +16,6 @@ class Settings:
     # --- DevText SMS Gateway (Updated) ---
     DEVTEXT_API_KEY = os.getenv("DEVTEXT_API_KEY")
     DEVTEXT_BASE_URL = os.getenv("DEVTEXT_BASE_URL", "https://devtext.site/api/v1/send")
-    DEVTEXT_SENDER_ID = os.getenv("DEVTEXT_SENDER_ID", "SME_NAV")
 
     # --- Email (Gmail SMTP) ---
     SENDER_EMAIL = os.getenv("SENDER_EMAIL")
