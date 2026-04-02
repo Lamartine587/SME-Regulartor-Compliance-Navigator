@@ -7,6 +7,7 @@ import Dashboard from "./pages/Dashboard";
 import DocumentVault from "./pages/DocumentVault";
 import Permits from "./pages/Permits";
 import Reminders from "./pages/Reminders";
+import Profile from "./pages/Profile"; // <-- ADDED THIS IMPORT
 
 // Auth Components
 import Register from "./Auth/Register";
@@ -27,17 +28,20 @@ function App() {
         <Route path="/" element={<LandingPage />} />
 
         {/* PUBLIC AUTH ROUTES (Bypassed if already logged in) */}
-        <Route path="/Register" element={<PublicRoute><Register /></PublicRoute>} />
-        <Route path="/SignIn" element={<PublicRoute><SignIn /></PublicRoute>} />
-        <Route path="/ForgotPassword" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
-        <Route path="/VerifyOTP" element={<PublicRoute><VerifyOTP/></PublicRoute>} />
-        <Route path="/ResetPassword" element={<PublicRoute><ResetPassword /></PublicRoute>} />
+        <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+        <Route path="/login" element={<PublicRoute><SignIn /></PublicRoute>} /> 
+        <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
+        <Route path="/verify-otp" element={<PublicRoute><VerifyOTP/></PublicRoute>} />
+        <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />
        
         {/* PROTECTED ROUTES (Require Login) */}
-        <Route path="/Dashboard" element={<ProtectedRoute><Dashboard/></ProtectedRoute>} />
-        <Route path="/Permits" element={<ProtectedRoute><Permits /></ProtectedRoute>} />
-        <Route path="/DocumentVault" element={<ProtectedRoute><DocumentVault /></ProtectedRoute>} />
-        <Route path="/Reminders" element={<ProtectedRoute><Reminders /></ProtectedRoute>} />
+        <Route path="/dashboard" element={<ProtectedRoute><Dashboard/></ProtectedRoute>} />
+        <Route path="/permits" element={<ProtectedRoute><Permits /></ProtectedRoute>} />
+        <Route path="/document-vault" element={<ProtectedRoute><DocumentVault /></ProtectedRoute>} />
+        <Route path="/reminders" element={<ProtectedRoute><Reminders /></ProtectedRoute>} />
+        
+        {/* <-- ADDED THE PROFILE ROUTE HERE --> */}
+        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
 
         {/* DEFAULT REDIRECT (Catches 404s and sends them home) */}
         <Route path="*" element={<Navigate to="/" replace />} />

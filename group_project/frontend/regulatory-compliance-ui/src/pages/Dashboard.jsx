@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
 import DashboardCard from "../components/DashboardCard";
+import { getProfile } from "../services/profileService"; // Added this import
 import { 
   DocumentTextIcon, 
   CheckCircleIcon, 
@@ -14,6 +15,7 @@ import {
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const [userName, setUserName] = useState(""); // State for the user's name
   const [summary, setSummary] = useState({
     total: 0,
     valid: 0,
@@ -24,7 +26,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const fetchDashboardSummary = async () => {
+  const fetchDashboardData = async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem("access_token"); 
@@ -34,7 +36,8 @@ export default function Dashboard() {
         return;
       }
 
-      const response = await fetch("http://localhost:8000/api/dashboard/summary", {
+      // 1. Fetch Dashboard Stats
+      const statsRes = await fetch("http://localhost:8000/api/dashboard/summary", {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -42,27 +45,31 @@ export default function Dashboard() {
         },
       });
 
-      if (!response.ok) {
-        if (response.status === 401) {
-          localStorage.removeItem("access_token");
-          navigate("/login");
-          return;
-        }
-        throw new Error("Could not load dashboard data.");
+      // 2. Fetch User Profile Name
+      const profileData = await getProfile();
+      
+      if (statsRes.ok) {
+        const statsData = await statsRes.json();
+        setSummary(statsData);
       }
 
-      const data = await response.json();
-      setSummary(data);
+      // Combine first and last name if they exist
+      if (profileData.first_name) {
+        setUserName(`${profileData.first_name} ${profileData.last_name || ""}`);
+      } else {
+        setUserName("User");
+      }
+
     } catch (err) {
       console.error("Dashboard Fetch Error:", err);
-      setError(err.message);
+      setError("Failed to sync dashboard data.");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchDashboardSummary();
+    fetchDashboardData();
   }, [navigate]);
 
   return (
@@ -77,11 +84,16 @@ export default function Dashboard() {
             
             <div className="flex justify-between items-end">
               <div>
-                <h1 className="text-3xl font-black text-slate-900">Dashboard Overview</h1>
-                <p className="text-sm font-medium text-slate-500 mt-1">Live compliance monitoring for Anga Systems.</p>
+                {/* Dynamically display the user's name */}
+                <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+                  Welcome back, <span className="text-indigo-600">{userName || "User"}</span>
+                </h1>
+                <p className="text-sm font-medium text-slate-500 mt-1">
+                  Here is your real-time compliance status.
+                </p>
               </div>
               <button 
-                onClick={fetchDashboardSummary}
+                onClick={fetchDashboardData}
                 className="p-2 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-indigo-600 transition-all shadow-sm"
               >
                 <ArrowPathIcon className={`h-5 w-5 ${loading ? "animate-spin" : ""}`} />
@@ -137,7 +149,7 @@ export default function Dashboard() {
             {/* Upcoming Expiries List */}
             <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
               <div className="px-8 py-6 border-b border-slate-50 flex justify-between items-center bg-slate-50/30">
-                <h3 className="font-black text-slate-800 text-lg uppercase tracking-tight">Upcoming Expiries</h3>
+                <h3 className="font-black text-slate-800 text-lg uppercase tracking-tight">Priority Renewals</h3>
                 <span className="text-[10px] font-black bg-white border border-slate-200 text-slate-400 px-3 py-1 rounded-full uppercase tracking-widest">
                   Action Required
                 </span>
@@ -153,10 +165,9 @@ export default function Dashboard() {
                     summary.upcomingExpiries.map((permit) => (
                       <div
                         key={permit.id}
-                        className="flex flex-col sm:flex-row sm:items-center justify-between p-6 bg-slate-50/50 border border-slate-100 rounded-2xl hover:bg-white hover:shadow-lg hover:shadow-slate-100 transition-all duration-300 group"
+                        className="flex flex-col sm:flex-row sm:items-center justify-between p-6 bg-slate-50/50 border border-slate-100 rounded-2xl hover:bg-white hover:shadow-lg transition-all duration-300 group"
                       >
                         <div className="flex-1 mb-4 sm:mb-0">
-                          {/* MAPPING FIX: Use title and issuing_authority */}
                           <h4 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
                             {permit.title}
                           </h4>
@@ -178,7 +189,7 @@ export default function Dashboard() {
                                 : "bg-emerald-50 text-emerald-700 border-emerald-100"
                             }`}
                           >
-                            {permit.days_left} days remaining
+                            {permit.days_left} days left
                           </span>
                         </div>
                       </div>
@@ -188,14 +199,14 @@ export default function Dashboard() {
                       <div className="bg-emerald-50 w-16 h-16 rounded-3xl flex items-center justify-center mx-auto mb-4">
                         <CheckCircleIcon className="h-8 w-8 text-emerald-500" />
                       </div>
-                      <p className="text-slate-900 font-black">All Clear!</p>
+                      <p className="text-slate-900 font-black">Compliance Maintained</p>
                       <p className="text-sm text-slate-400 mt-1 font-medium">No documents are expiring in the next 90 days.</p>
                     </div>
                   )}
                 </div>
 
                 <button
-                  onClick={() => navigate("/Permits")}
+                  onClick={() => navigate("/permits")}
                   className="w-full mt-8 flex items-center justify-center py-4 text-xs font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 rounded-2xl hover:bg-indigo-600 hover:text-white transition-all duration-300"
                 >
                   Manage All Permits

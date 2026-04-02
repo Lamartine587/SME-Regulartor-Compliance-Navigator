@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { removeToken } from "../utils/auth";
+import { getProfile } from "../services/profileService";
 import { 
   ChevronDownIcon, 
   ArrowRightOnRectangleIcon, 
@@ -11,14 +12,37 @@ import {
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const [user, setUser] = useState({ name: "SME Admin", initials: "SA" });
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
+
+  // Fetch user data for the navbar
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const data = await getProfile();
+        if (data.first_name) {
+          const first = data.first_name;
+          const last = data.last_name || "";
+          
+          setUser({
+            name: `${first} ${last}`.trim(),
+            // Generate initials dynamically
+            initials: `${first.charAt(0)}${last ? last.charAt(0) : ""}`.toUpperCase()
+          });
+        }
+      } catch (err) {
+        console.error("Navbar profile fetch failed:", err);
+      }
+    };
+    fetchUser();
+  }, []);
 
   // Handle Logout
   const handleLogout = () => {
     removeToken();
-    // FIXED: Changed from "/login" to "/SignIn" to match App.jsx
-    navigate("/SignIn"); 
+    localStorage.removeItem("user_id"); // Clean up local storage
+    navigate("/login"); 
   };
 
   // Close dropdown when clicking outside
@@ -35,7 +59,7 @@ export default function Navbar() {
   return (
     <nav className="sticky top-0 z-40 w-full bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-3 lg:h-16 flex justify-between items-center transition-all">
       
-      {/* Left side: Page context or Breadcrumb */}
+      {/* Left side: Breadcrumb */}
       <div className="hidden md:block">
         <p className="text-slate-500 font-medium text-sm flex items-center">
           SME Navigator 
@@ -61,14 +85,14 @@ export default function Navbar() {
               isOpen ? "bg-slate-50 border-slate-200 shadow-sm" : "border-transparent hover:bg-slate-50"
             }`}
           >
-            {/* User Avatar with Initials (Don Kipkoech) */}
+            {/* Dynamic Initials based on Name */}
             <div className="w-9 h-9 bg-gradient-to-tr from-indigo-600 to-indigo-500 text-white rounded-xl flex items-center justify-center text-sm font-bold shadow-md shadow-indigo-200">
-              DK
+              {user.initials}
             </div>
             
             <div className="hidden lg:block text-left">
-              <p className="text-xs font-bold text-slate-900 leading-none mb-0.5">Don Kipkoech</p>
-              <p className="text-[10px] font-medium text-slate-400 uppercase tracking-tighter">IT Administrator</p>
+              <p className="text-xs font-bold text-slate-900 leading-none mb-0.5">{user.name}</p>
+              <p className="text-[10px] font-medium text-slate-400 uppercase tracking-tighter">Administrator</p>
             </div>
 
             <ChevronDownIcon className={`h-4 w-4 text-slate-400 transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`} />
@@ -82,18 +106,27 @@ export default function Navbar() {
                 <p className="text-xs text-slate-400 font-medium uppercase tracking-widest">Account Details</p>
               </div>
 
-              <button className="flex w-full items-center px-4 py-2.5 text-sm text-slate-600 hover:bg-indigo-50 hover:text-indigo-700 transition-colors">
+              {/* View Profile Button - Now Functional */}
+              <button 
+                onClick={() => { navigate("/profile"); setIsOpen(false); }}
+                className="flex w-full items-center px-4 py-2.5 text-sm text-slate-600 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
+              >
                 <UserIcon className="h-4 w-4 mr-3 opacity-70" />
                 View Profile
               </button>
 
-              <button className="flex w-full items-center px-4 py-2.5 text-sm text-slate-600 hover:bg-indigo-50 hover:text-indigo-700 transition-colors">
+              {/* Settings Button - Now Functional */}
+              <button 
+                onClick={() => { navigate("/profile"); setIsOpen(false); }}
+                className="flex w-full items-center px-4 py-2.5 text-sm text-slate-600 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
+              >
                 <Cog6ToothIcon className="h-4 w-4 mr-3 opacity-70" />
                 Settings
               </button>
 
               <div className="h-px bg-slate-100 my-1 mx-2"></div>
 
+              {/* Logout Button */}
               <button 
                 onClick={handleLogout}
                 className="flex w-full items-center px-4 py-2.5 text-sm text-rose-600 hover:bg-rose-50 font-bold transition-colors"

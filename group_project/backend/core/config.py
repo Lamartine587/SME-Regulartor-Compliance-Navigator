@@ -4,31 +4,50 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Settings:
-    # Databases
+    # --- Databases ---
     NEON_DATABASE_URL = os.getenv("NEON_DATABASE_URL")
     MONGODB_URL = os.getenv("MONGODB_URL")
 
-    # Security
-    SECRET_KEY = os.getenv("SECRET_KEY", "your_secret_key")
+    # --- Security & JWT ---
+    SECRET_KEY = os.getenv("SECRET_KEY", "your-default-dev-key-change-this")
     ALGORITHM = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
-    # Africa's Talking
-    AT_USERNAME = os.getenv("AT_USERNAME", "sandbox")
-    AT_API_KEY = os.getenv("AT_API_KEY")
+    # --- DevText SMS Gateway (Updated) ---
+    DEVTEXT_API_KEY = os.getenv("DEVTEXT_API_KEY")
+    DEVTEXT_BASE_URL = os.getenv("DEVTEXT_BASE_URL", "https://devtext.site/api/v1/send")
+    DEVTEXT_SENDER_ID = os.getenv("DEVTEXT_SENDER_ID", "SME_NAV")
 
-    # Email (Gmail SMTP)
+    # --- Email (Gmail SMTP) ---
     SENDER_EMAIL = os.getenv("SENDER_EMAIL")
+    SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
     SMTP_SERVER = "smtp.gmail.com"
     SMTP_PORT = 465 
-    SMTP_PASSWORD = os.getenv("SMTP_PASSWORD") # App Password
 
-    # AI (Featherless)
+    # --- AI Engine (Featherless) ---
     FEATHERLESS_API_KEY = os.getenv("FEATHERLESS_API_KEY")
+    # Added: Allows you to swap models (e.g., Llama-3.1-70B to 8B) from .env
+    AI_MODEL_NAME = os.getenv("AI_MODEL_NAME", "meta-llama/Llama-3.1-70B-Instruct")
+
+    # --- Google OAuth ---
+    GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 
     def __init__(self):
-        # Fail-safe: Server won't start if critical keys are missing
-        for key in ["NEON_DATABASE_URL", "MONGODB_URL", "AT_API_KEY"]:
-            if not getattr(self, key):
-                raise ValueError(f"CRITICAL ERROR: {key} is missing from .env")
+        """
+        Fail-safe Gatekeeper: Ensures the backend won't start if 
+        critical infrastructure keys are missing.
+        """
+        critical_keys = [
+            "NEON_DATABASE_URL", 
+            "MONGODB_URL", 
+            "DEVTEXT_API_KEY",
+            "FEATHERLESS_API_KEY"
+        ]
+        
+        for key in critical_keys:
+            if not getattr(self, key, None):
+                # We raise a clear error to stop the server before it crashes in production
+                raise ValueError(f"❌ CONFIG ERROR: {key} is missing from your .env file.")
 
+# Instantiate the settings to be used across the app
 settings = Settings()

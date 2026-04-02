@@ -1,67 +1,79 @@
-# --- START OF HOTFIX ---
-# This prevents the SecretStr NameError in fastapi-mail on Pydantic V2
+import os
 import builtins
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+
+# --- PYDANTIC V2 HOTFIX ---
 try:
     from pydantic import SecretStr
     builtins.SecretStr = SecretStr
 except ImportError:
     pass
-# --- END OF HOTFIX ---
-
-import os
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
+# --------------------------
 
 from core.config import settings
 from db.neon_session import engine, Base
+from core.scheduler import start_reminder_scheduler 
+
 from api.routes_auth import router as auth_router
 from api.routes_ussd import router as ussd_router 
 from api.routes_dashboard import router as dashboard_router
 from api.routes_knowledge import router as knowledge_router
 from api.routes_vault import router as vault_router
-from core.scheduler import start_reminder_scheduler 
+from api.routes_profile import router as profile_router
 
-# 1. Initialize Database Tables
-# This creates the schema in your NeonDB (PostgreSQL)
+# Initialize NeonDB Tables
 Base.metadata.create_all(bind=engine)
 
-# 2. Initialize FastAPI
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("🚀 Starting SME Navigator Services...")
+    os.makedirs("uploads", exist_ok=True)
+    start_reminder_scheduler()
+    yield 
+    print("🛑 Shutting down SME Navigator Services...")
+
 app = FastAPI(
     title="SME Regulatory Compliance Navigator",
     description="AI-Powered Compliance Management using FastAPI, NeonDB, and MongoDB.",
-    version="1.1.0"
+    version="1.1.0",
+    lifespan=lifespan
 )
 
-# 3. Mount Static Files for Document Viewing
-# This allows the 'View' button in React to open the PDFs
-if not os.path.exists("uploads"):
-    os.makedirs("uploads")
+# --- COOP HOTFIX MIDDLEWARE ---
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    # This header prevents the Google Auth popup from being blocked or throwing warnings
+    response.headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups"
+    return response
+
+# Mount Static Files
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
-# 4. Configure CORS
-# Crucial so your React frontend at localhost:5173 can talk to this backend
+# Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], 
+    allow_origins=["*"], # Restricted to specific frontend domain in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# 5. Startup Events: Start the Reminder Engine
-@app.on_event("startup")
-async def startup_event():
-    print("🚀 Starting SME Navigator Services...")
-    # This starts the background loop that checks for expiries daily at 8 AM
-    start_reminder_scheduler()
+# Register Routers
+routers = [
+    (auth_router, "Authentication"),
+    (profile_router, "Profile"),
+    (dashboard_router, "Dashboard"),
+    (knowledge_router, "Knowledge Base"),
+    (ussd_router, "USSD Service"),
+    (vault_router, "Document Vault")
+]
 
-# 6. Register All Routers
-app.include_router(auth_router, tags=["Authentication"])
-app.include_router(dashboard_router, tags=["Dashboard"])
-app.include_router(knowledge_router, tags=["Knowledge Base"])
-app.include_router(ussd_router, tags=["USSD Service"])
-app.include_router(vault_router, tags=["Document Vault"])
+for router, tag in routers:
+    app.include_router(router, tags=[tag])
 
 @app.get("/api/health", tags=["System"])
 def health_check():
@@ -69,7 +81,7 @@ def health_check():
         "status": "online",
         "database": "connected",
         "scheduler": "active",
-        "message": "SME Navigator API is fully operational for Anga Systems."
+        "message": "SME Navigator API is fully operational."
     }
 
 @app.get("/", tags=["System"])

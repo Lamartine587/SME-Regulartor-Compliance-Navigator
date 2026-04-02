@@ -1,33 +1,47 @@
+import requests
 import os
-import africastalking
+from dotenv import load_dotenv
 
-# 1. Load credentials from the environment
-AT_USERNAME = os.getenv("AT_USERNAME", "sandbox")
-AT_API_KEY = os.getenv("AT_API_KEY")
+load_dotenv()
 
-# 2. Initialize the Africa's Talking SDK
-africastalking.initialize(AT_USERNAME, AT_API_KEY)
-
-# 3. Get the SMS service instance
-sms = africastalking.SMS
-
-
-def send_sms_otp(target_phone: str, otp_code: str):
+def send_sms_otp(phone_number: str, otp: str):
     """
-    Sends a 6-digit OTP via Africa's Talking.
-    Example target_phone: '+254797428075'
+    Integrates with the DevText API to send verification codes.
     """
-    message_body = f"Your verification code is: {otp_code}. It expires in 5 minutes."
+    api_key = os.getenv("DEVTEXT_API_KEY")
+    url = os.getenv("DEVTEXT_BASE_URL")
+    sender_id = os.getenv("DEVTEXT_SENDER_ID")
+
+    # 1. Format the phone number (DevText likely requires international format)
+    if phone_number.startswith("0"):
+        formatted_phone = "254" + phone_number[1:]
+    elif phone_number.startswith("+"):
+        formatted_phone = phone_number[1:]
+    else:
+        formatted_phone = phone_number
+
+    # 2. Build the Payload (Verify these keys from devtext.site/api-docs)
+    # Common keys: 'api_key', 'to', 'message', 'from'
+    payload = {
+        "api_key": api_key,
+        "to": formatted_phone,
+        "message": f"Your SME Navigator code is: {otp}. Valid for 5 minutes.",
+        "from": sender_id
+    }
 
     try:
-        # Africa's Talking expects recipients as a list, even for a single number
-        recipients = [target_phone]
-
-        # Send the SMS
-        # (The 'sender_id' parameter is omitted here so the Sandbox defaults handle the routing)
-        response = sms.send(message_body, recipients)
-
-        return {"status": "success", "data": response}
+        # 3. Make the POST request
+        response = requests.post(url, json=payload, timeout=10)
+        
+        # Log the response to your terminal so you can debug
+        print(f"📡 DevText Response: {response.status_code} - {response.text}")
+        
+        if response.status_code in [200, 201]:
+            return True
+        else:
+            print(f"❌ DevText Error: {response.text}")
+            return False
 
     except Exception as e:
-        return {"status": "error", "details": str(e)}
+        print(f"🚨 Connection to DevText failed: {str(e)}")
+        return False

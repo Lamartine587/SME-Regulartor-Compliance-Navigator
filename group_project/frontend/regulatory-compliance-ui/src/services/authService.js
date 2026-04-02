@@ -1,16 +1,40 @@
 const BASE_URL = "http://127.0.0.1:8000";
 
-// Register a new user
+// --- GOOGLE AUTHENTICATION ---
+export const googleLogin = async (googleToken) => {
+  const res = await fetch(`${BASE_URL}/api/auth/google`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token: googleToken }), 
+  });
+  
+  const data = await res.json();
+  if (!res.ok) {
+    console.error("🚨 FASTAPI GOOGLE ERROR:", data.detail);
+    const errorMessage = Array.isArray(data.detail) ? data.detail[0]?.msg : data.detail;
+    throw new Error(errorMessage || "Google Sign-In failed.");
+  }
+  return data;
+};
+
+// --- STANDARD REGISTRATION ---
 export const registerUser = async (email, phone, password) => {
   const res = await fetch(`${BASE_URL}/api/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, phone, password }),
   });
-  return res.json();
+  
+  const data = await res.json();
+  if (!res.ok) {
+    console.error("🚨 FASTAPI REGISTRATION ERROR:", data.detail); 
+    const errorMessage = Array.isArray(data.detail) ? data.detail[0]?.msg : data.detail;
+    throw new Error(errorMessage || "Registration failed.");
+  }
+  return data;
 };
 
-// Login
+// --- STANDARD LOGIN ---
 export const loginUser = async (email, password) => {
   const res = await fetch(`${BASE_URL}/api/auth/login`, {
     method: "POST",
@@ -19,20 +43,15 @@ export const loginUser = async (email, password) => {
   });
   
   const data = await res.json();
-
-  // If the backend threw an error (like a 401, 403, 404)
   if (!res.ok) {
     console.error("🚨 FASTAPI ERROR DETAIL:", data.detail); 
-    // Throwing an error forces the catch block in SignIn.jsx to trigger
     const errorMessage = Array.isArray(data.detail) ? data.detail[0]?.msg : data.detail;
-    throw new Error(errorMessage || "Login failed. Please check your credentials.");
+    throw new Error(errorMessage || "Login failed.");
   }
-  
-  // Return the pure data object to SignIn.jsx
   return data;
 };
 
-// Forgot Password (send OTP)
+// --- FORGOT PASSWORD ---
 export const forgotPassword = async (email) => {
   const res = await fetch(`${BASE_URL}/api/auth/forgot-password`, {
     method: "POST",
@@ -42,17 +61,24 @@ export const forgotPassword = async (email) => {
   return await res.json();
 };
 
-// Verify OTP
-export const verifyOTP = async (user_id, otp_code, verification_type) => {
+// --- VERIFY OTP ---
+export const verifyOTP = async (payload) => {
   const res = await fetch(`${BASE_URL}/api/auth/verify-otp`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ user_id, otp_code, verification_type }),
+    body: JSON.stringify(payload),
   });
-  return await res.json();
+  
+  const data = await res.json();
+  if (!res.ok) {
+    console.error("🚨 FASTAPI VERIFY ERROR:", data.detail); 
+    const errorMessage = Array.isArray(data.detail) ? data.detail[0]?.msg : data.detail;
+    throw new Error(errorMessage || "Verification failed.");
+  }
+  return data;
 };
 
-// Reset Password
+// --- RESET PASSWORD ---
 export const resetPassword = async (email, otp_code, new_password) => {
   const res = await fetch(`${BASE_URL}/api/auth/reset-password`, {
     method: "POST",
@@ -60,4 +86,19 @@ export const resetPassword = async (email, otp_code, new_password) => {
     body: JSON.stringify({ email, otp_code, new_password }),
   });
   return await res.json();
+};
+
+export const requestPhoneOTP = async () => {
+  const token = localStorage.getItem("access_token");
+  const res = await fetch(`${BASE_URL}/api/auth/request-otp`, {
+    method: "POST",
+    headers: { 
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    },
+  });
+  
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Could not request OTP.");
+  return data;
 };

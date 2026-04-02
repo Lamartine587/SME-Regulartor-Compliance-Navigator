@@ -1,39 +1,41 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { verifyOTP } from "../services/authService";
 
 export default function VerifyOTP() {
   const navigate = useNavigate();
-  const [otp, setOtp] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const location = useLocation();
+  
+  const email = location.state?.email || "";
+  const userId = location.state?.userId;
 
-  // Retrieve the email saved during the Forgot Password step
-  const email = sessionStorage.getItem("resetEmail");
+  const [emailOtp, setEmailOtp] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
-    if (!otp) {
-      setError("Please enter the OTP code.");
-      return;
-    }
+    if (!emailOtp) return setError("Please enter your verification code.");
+    if (!userId) return setError("Session expired. Please return to the registration page.");
 
     setLoading(true);
 
     try {
-      // Passing 0 as a placeholder for user_id based on your backend spec
-      const data = await verifyOTP(0, otp, "password_reset"); 
+      // Sending the exact payload structure your backend expects
+      await verifyOTP({
+        user_id: parseInt(userId),
+        verification_type: "email",
+        otp_code: emailOtp
+      });
 
-      if (data?.detail && Array.isArray(data.detail) && data.detail.length > 0) {
-        setError(data.detail[0].msg || "Verification failed. Please try again.");
-      } else {
-        // Success: Move to the final reset password screen
-        navigate("/reset-password");
-      }
+      setSuccess("Email verified! Redirecting to login...");
+      setTimeout(() => navigate("/login"), 2000);
+
     } catch (err) {
-      setError("Network error, please try again.");
+      setError(err.message || "Invalid code. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -41,64 +43,26 @@ export default function VerifyOTP() {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 to-indigo-900 p-4">
-      
       <form onSubmit={handleSubmit} className="bg-white p-10 rounded-2xl shadow-2xl w-full max-w-md space-y-6">
-        
         <div className="text-center space-y-2 mb-6">
-          <h2 className="text-3xl font-extrabold text-gray-900">Verify OTP</h2>
+          <h2 className="text-3xl font-extrabold text-gray-900">Verify Email</h2>
           <p className="text-sm text-gray-500">
-            {email ? (
-              <>We sent a verification code to <span className="font-semibold text-gray-800">{email}</span></>
-            ) : (
-              "Enter the verification code sent to your email."
-            )}
+            {email ? <>Code sent to <span className="font-semibold text-gray-800">{email}</span></> : "Enter the code sent to your email."}
           </p>
         </div>
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1 text-center">
-              Security Code
-            </label>
-            <input
-              type="text"
-              placeholder="000000"
-              maxLength="6"
-              value={otp}
-              onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))} // Optional: ensures only numbers are typed
-              className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors outline-none bg-gray-50 text-center tracking-[0.5em] text-xl font-mono"
-            />
+            <input required type="text" placeholder="000000" maxLength="6" value={emailOtp} onChange={(e) => setEmailOtp(e.target.value.replace(/\D/g, ''))} className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-gray-50 text-center tracking-[0.5em] text-xl font-mono" />
           </div>
         </div>
 
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-center text-sm font-medium">
-            {error}
-          </div>
-        )}
+        {error && <div className="bg-red-50 text-red-700 p-3 rounded-lg text-center text-sm font-medium">{error}</div>}
+        {success && <div className="bg-green-50 text-green-700 p-3 rounded-lg text-center text-sm font-medium">{success}</div>}
 
-        <button
-          type="submit"
-          disabled={!otp || loading}
-          className={`w-full p-3 rounded-lg text-white font-semibold tracking-wide transition-all ${
-            !otp || loading 
-              ? "bg-indigo-300 cursor-not-allowed" 
-              : "bg-indigo-600 hover:bg-indigo-700 shadow-md hover:shadow-lg active:scale-[0.98]"
-          }`}
-        >
-          {loading ? "Verifying..." : "Verify OTP"}
+        <button type="submit" disabled={!emailOtp || loading} className="w-full p-3 rounded-lg text-white font-semibold bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 transition-colors">
+          {loading ? "Verifying..." : "Verify & Login"}
         </button>
-
-        <div className="pt-4 text-center">
-          <button
-            type="button"
-            onClick={() => navigate('/forgot-password')}
-            className="text-sm text-gray-500 hover:text-indigo-600 transition-colors"
-          >
-            &larr; Back to Forgot Password
-          </button>
-        </div>
-
       </form>
     </div>
   );
