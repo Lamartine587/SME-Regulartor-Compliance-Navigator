@@ -27,6 +27,7 @@ class Settings:
     FEATHERLESS_API_KEY = os.getenv("FEATHERLESS_API_KEY")
     # Added: Allows you to swap models (e.g., Llama-3.1-70B to 8B) from .env
     AI_MODEL_NAME = os.getenv("AI_MODEL_NAME", "meta-llama/Llama-3.1-70B-Instruct")
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
     # --- Google OAuth ---
     GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")

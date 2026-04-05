@@ -7,7 +7,10 @@ import {
   DocumentMagnifyingGlassIcon,
   ExclamationTriangleIcon,
   EyeIcon,
-  ArrowPathIcon
+  ArrowPathIcon,
+  TrashIcon,
+  XMarkIcon,
+  DocumentArrowUpIcon
 } from "@heroicons/react/24/outline";
 
 export default function Permits() {
@@ -16,9 +19,15 @@ export default function Permits() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // --- Upload Modal States ---
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+
   const token = localStorage.getItem("access_token");
 
-  // Logic to calculate status based on NeonDB dates
+  // Date/Status Logic
   const getDaysRemaining = (expiryDate) => {
     if (!expiryDate) return null;
     const today = new Date();
@@ -36,6 +45,7 @@ export default function Permits() {
 
   const fetchPermits = async () => {
     setLoading(true);
+    setError(""); 
     try {
       if (!token) {
         navigate("/login");
@@ -61,10 +71,72 @@ export default function Permits() {
     fetchPermits();
   }, []);
 
-  // BUTTON ACTION: View the PDF from the static backend
   const handleView = (filePath) => {
     if (!filePath) return;
-    window.open(`http://localhost:8000/${filePath}`, "_blank");
+    const cleanPath = filePath.startsWith("/") ? filePath.slice(1) : filePath;
+    window.open(`http://localhost:8000/${cleanPath}`, "_blank");
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this document? This cannot be undone.")) {
+      return;
+    }
+    try {
+      const res = await fetch(`http://localhost:8000/api/vault/documents/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Failed to delete the document.");
+      setPermits(permits.filter((permit) => permit.id !== id));
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  // --- Upload Handlers ---
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setSelectedFile(e.target.files[0]);
+      setUploadError(""); // Clear any previous errors
+    }
+  };
+
+  const handleUploadSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedFile) {
+      return setUploadError("Please select a file to upload.");
+    }
+
+    setIsUploading(true);
+    setUploadError("");
+
+    // We must use FormData to send files to a FastAPI backend
+    const formData = new FormData();
+    formData.append("file", selectedFile);
+
+    try {
+      const res = await fetch("http://localhost:8000/api/vault/documents", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`
+          // Note: DO NOT set 'Content-Type' manually when sending FormData
+          // The browser automatically sets it to 'multipart/form-data' with the correct boundary
+        },
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error("Failed to upload document. Please try again.");
+
+      // Reset modal and refresh the table
+      setSelectedFile(null);
+      setIsUploadModalOpen(false);
+      fetchPermits();
+
+    } catch (err) {
+      setUploadError(err.message);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
@@ -74,7 +146,7 @@ export default function Permits() {
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
         <Navbar />
 
-        <main className="flex-1 overflow-y-auto p-6 lg:p-10">
+        <main className="flex-1 overflow-y-auto p-6 lg:p-10 relative">
           <div className="max-w-7xl mx-auto space-y-6">
 
             {/* Header Section */}
@@ -88,12 +160,13 @@ export default function Permits() {
                 <button 
                   onClick={fetchPermits}
                   className="p-2 text-slate-400 hover:text-indigo-600 bg-white border border-slate-200 rounded-lg transition-all"
+                  title="Refresh Permits"
                 >
                   <ArrowPathIcon className={`h-5 w-5 ${loading ? "animate-spin" : ""}`} />
                 </button>
                 <button 
-                  // BUTTON ACTION: Navigate to the upload page (DocumentVault)
-                  onClick={() => navigate("/Documents")}
+                  // Opens the pop-up modal instead of navigating
+                  onClick={() => setIsUploadModalOpen(true)}
                   className="flex items-center px-5 py-2.5 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200"
                 >
                   <PlusIcon className="h-5 w-5 mr-2" />
@@ -132,21 +205,14 @@ export default function Permits() {
                       ))
                     ) : permits.length > 0 ? (
                       permits.map((permit) => {
-                        // FIXED MAPPING: Use permit.expiry_date (lowercase_underscore)
                         const daysLeft = getDaysRemaining(permit.expiry_date);
                         const status = getStatus(daysLeft);
 
                         return (
                           <tr key={permit.id} className="hover:bg-slate-50/50 transition-colors group">
-                            <td className="px-8 py-6 font-bold text-slate-800">
-                              {permit.title} 
-                            </td>
-                            <td className="px-8 py-6 text-slate-500 font-medium">
-                              {permit.issuing_authority || "AI Processing..."}
-                            </td>
-                            <td className="px-8 py-6 text-slate-500 font-mono text-xs">
-                              {permit.expiry_date || "---"}
-                            </td>
+                            <td className="px-8 py-6 font-bold text-slate-800">{permit.title}</td>
+                            <td className="px-8 py-6 text-slate-500 font-medium">{permit.issuing_authority || "AI Processing..."}</td>
+                            <td className="px-8 py-6 text-slate-500 font-mono text-xs">{permit.expiry_date || "---"}</td>
                             <td className="px-8 py-6">
                               <span className={`px-3 py-1 text-[10px] font-black rounded-full uppercase tracking-tighter ${
                                 status === "Valid" ? "bg-emerald-50 text-emerald-600" : 
@@ -157,13 +223,14 @@ export default function Permits() {
                               </span>
                             </td>
                             <td className="px-8 py-6 text-right">
-                              <button
-                                onClick={() => handleView(permit.file_path)}
-                                className="inline-flex items-center text-indigo-600 hover:text-white hover:bg-indigo-600 bg-indigo-50 px-4 py-2 rounded-xl text-xs font-black transition-all"
-                              >
-                                <EyeIcon className="h-4 w-4 mr-1.5" />
-                                View
-                              </button>
+                              <div className="flex items-center justify-end space-x-2">
+                                <button onClick={() => handleView(permit.file_path)} className="inline-flex items-center text-indigo-600 hover:text-white hover:bg-indigo-600 bg-indigo-50 px-3 py-2 rounded-xl text-xs font-black transition-all">
+                                  <EyeIcon className="h-4 w-4 mr-1.5" /> View
+                                </button>
+                                <button onClick={() => handleDelete(permit.id)} className="inline-flex items-center text-rose-600 hover:text-white hover:bg-rose-600 bg-rose-50 px-3 py-2 rounded-xl text-xs font-black transition-all">
+                                  <TrashIcon className="h-4 w-4 mr-1.5" /> Delete
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         );
@@ -181,9 +248,81 @@ export default function Permits() {
                 </table>
               </div>
             </div>
+
           </div>
         </main>
       </div>
+
+      {/* --- POP-UP MODAL OVERLAY --- */}
+      {isUploadModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <h3 className="text-lg font-black text-slate-900">Upload Document</h3>
+              <button 
+                onClick={() => {
+                  setIsUploadModalOpen(false);
+                  setSelectedFile(null);
+                  setUploadError("");
+                }}
+                className="p-1 text-slate-400 hover:text-slate-700 bg-white rounded-lg transition-colors"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUploadSubmit} className="p-6 space-y-6">
+              
+              <div className="border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center bg-slate-50 hover:bg-indigo-50 hover:border-indigo-200 transition-colors cursor-pointer relative">
+                <DocumentArrowUpIcon className="mx-auto h-10 w-10 text-indigo-400 mb-3" />
+                <label className="cursor-pointer">
+                  <span className="text-indigo-600 font-black hover:underline text-sm">Browse files</span>
+                  <span className="text-slate-500 text-sm font-medium"> to upload</span>
+                  <input 
+                    type="file" 
+                    accept=".pdf,image/*" 
+                    className="hidden" 
+                    onChange={handleFileChange} 
+                  />
+                </label>
+                <p className="text-xs text-slate-400 mt-2 font-medium">Supports PDF, PNG, JPG</p>
+              </div>
+
+              {selectedFile && (
+                <div className="bg-indigo-50 border border-indigo-100 p-3 rounded-xl flex items-center justify-between">
+                  <span className="text-xs font-bold text-indigo-900 truncate max-w-[80%]">
+                    {selectedFile.name}
+                  </span>
+                  <span className="text-[10px] font-black text-indigo-500 uppercase">
+                    {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                  </span>
+                </div>
+              )}
+
+              {uploadError && (
+                <div className="text-xs font-black text-rose-600 uppercase tracking-tighter text-center bg-rose-50 p-2 rounded-lg">
+                  {uploadError}
+                </div>
+              )}
+
+              <button 
+                type="submit" 
+                disabled={!selectedFile || isUploading}
+                className={`w-full py-3.5 rounded-xl text-white text-xs font-black uppercase tracking-widest transition-all ${
+                  isUploading || !selectedFile 
+                    ? "bg-indigo-300 cursor-not-allowed" 
+                    : "bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-200"
+                }`}
+              >
+                {isUploading ? "Uploading & Scanning..." : "Submit to AI Engine"}
+              </button>
+
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

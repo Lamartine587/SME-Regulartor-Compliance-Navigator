@@ -15,10 +15,30 @@ const KENYAN_COUNTIES = [
 ];
 
 const BUSINESS_TYPES = [
-  "Retail & Wholesale", "Agribusiness & Farming", "ICT & Tech Solutions",
-  "Manufacturing", "Hospitality & Catering", "Healthcare & Pharmacy",
-  "Professional Services (Law/Accounting)", "Transport & Logistics",
-  "Construction & Real Estate", "Beauty & Personal Care", "Education", "Other"
+  "General Retail (Duka / Boutique / Shop)",
+  "Agribusiness & Produce Value Addition",
+  "ICT, Cyber Cafes & Digital Services",
+  "Small Scale Manufacturing (Jua Kali / Tailoring)",
+  "Fast Food, Restaurants & Outside Catering",
+  "Beauty, Salon & Barbershop Services",
+  "Logistics, Delivery & Boda Boda Services",
+  "Pharmacy & Private Health Clinics",
+  "Professional Services (Consulting / Law / Accounting)",
+  "Hardware, Construction & Real Estate",
+  "Private Schools & Daycare Centers",
+  "Artisan & Maintenance (Plumbing / Electrical / Auto)",
+  "Other / Diversified SME"
+];
+
+// Added Job Titles for SME context
+const JOB_TITLES = [
+  "Owner / Director",
+  "Manager / Supervisor",
+  "Money Manager / Accounts",
+  "Office Assistant / Admin",
+  "IT / Tech Support Person",
+  "Sales / Marketing Person",
+  "Other"
 ];
 
 export default function Profile() {
@@ -30,7 +50,7 @@ export default function Profile() {
   const userId = localStorage.getItem("user_id"); 
 
   const [profileData, setProfileData] = useState({
-    email: "", // Display only
+    email: "", 
     first_name: "", last_name: "", phone: "", is_phone_verified: false,
     role_title: "", business_name: "", registration_number: "", industry: "", county_location: ""
   });
@@ -53,17 +73,12 @@ export default function Profile() {
     fetchProfile();
   }, []);
 
-  // --- Strict Input Sanitization ---
-  
-  // 1. Name Sanitization (No numbers allowed)
   const handleNameChange = (e) => {
     const { name, value } = e.target;
-    // Replace anything that is NOT a letter or a space
     const sanitizedValue = value.replace(/[^a-zA-Z\s]/g, "");
     setProfileData({ ...profileData, [name]: sanitizedValue });
   };
 
-  // 2. Phone Gatekeeper (+254 format, max 13 chars)
   const handlePhoneChange = (e) => {
     let val = e.target.value;
     if (val && !val.startsWith("+")) val = "+" + val;
@@ -73,7 +88,6 @@ export default function Profile() {
     }
   };
 
-  // 3. Generic Change (for Business/PIN)
   const handleChange = (e) => {
     setProfileData({ ...profileData, [e.target.name]: e.target.value });
   };
@@ -109,9 +123,7 @@ export default function Profile() {
 
   const handleProfileUpdate = async (e) => {
     e.preventDefault();
-    
-    // Final Validation Check
-    if (!profileData.first_name || !profileData.last_name || !profileData.phone) {
+    if (!profileData.first_name || !profileData.last_name || !profileData.phone || !profileData.role_title) {
       return setSaveMessage({ type: "error", text: "Please fill all required fields." });
     }
 
@@ -152,7 +164,6 @@ export default function Profile() {
                   <h4 className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-6 border-l-4 border-indigo-600 pl-3">Personal Details</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     
-                    {/* Read-Only Email Field */}
                     <div className="md:col-span-2">
                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Registered Email (Not Editable)</label>
                       <input 
@@ -197,9 +208,18 @@ export default function Profile() {
                       </div>
                     </div>
 
+                    {/* Updated Job Title Dropdown */}
                     <div>
                       <label className="block text-[10px] font-black text-slate-700 uppercase tracking-widest mb-1">Job Title</label>
-                      <input type="text" name="role_title" value={profileData.role_title} onChange={handleChange} className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium" />
+                      <select 
+                        name="role_title" 
+                        value={profileData.role_title} 
+                        onChange={handleChange} 
+                        className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium cursor-pointer"
+                      >
+                        <option value="">Select Job Title...</option>
+                        {JOB_TITLES.map(title => <option key={title} value={title}>{title}</option>)}
+                      </select>
                     </div>
                   </div>
                 </div>
@@ -214,7 +234,7 @@ export default function Profile() {
                     </div>
                     <div>
                       <label className="block text-[10px] font-black text-slate-700 uppercase tracking-widest mb-1">KRA PIN / Reg No.</label>
-                      <input type="text" name="registration_number" value={profileData.registration_number} onChange={handleChange} className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium" />
+                      <input type="text" name="registration_number" value={profileData.registration_number} onChange={handleChange} className="w-full border border-slate-300 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium" />
                     </div>
                     <div>
                       <label className="block text-[10px] font-black text-slate-700 uppercase tracking-widest mb-1">Type of Business (Industry)</label>
@@ -246,7 +266,7 @@ export default function Profile() {
 
             {/* VERIFICATION SECTION */}
             {!profileData.is_phone_verified && (
-              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-8 space-y-6 animate-pulse">
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-8 space-y-6">
                 <div className="flex justify-between items-center">
                   <div>
                     <h3 className="text-sm font-black text-amber-900 uppercase tracking-widest">Phone Verification Required</h3>

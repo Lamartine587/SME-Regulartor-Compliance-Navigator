@@ -5,7 +5,7 @@ from datetime import datetime
 class ProfileUpdate(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
-    phone: Optional[str] = None # <-- Added
+    phone: Optional[str] = None
     role_title: Optional[str] = None
     business_name: Optional[str] = None
     registration_number: Optional[str] = None
@@ -15,7 +15,8 @@ class ProfileUpdate(BaseModel):
 class ProfileResponse(ProfileUpdate):
     id: int
     user_id: int
-    is_phone_verified: bool # <-- Added
+    email: str
+    is_phone_verified: bool
     updated_at: datetime
 
     class Config:

@@ -3,31 +3,38 @@ import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
 import DashboardCard from "../components/DashboardCard";
-import { getProfile } from "../services/profileService"; // Added this import
+import { getProfile } from "../services/profileService"; 
 import { 
   DocumentTextIcon, 
   CheckCircleIcon, 
   ExclamationTriangleIcon, 
   XCircleIcon,
   ArrowRightIcon,
-  ArrowPathIcon
+  ArrowPathIcon,
+  ClockIcon,
+  ShieldCheckIcon // Added a shield icon for the compliance score
 } from "@heroicons/react/24/outline";
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [userName, setUserName] = useState(""); // State for the user's name
+  const [userName, setUserName] = useState(""); 
+  
+  // 1. Updated State to match your new FastAPI DashboardSummary Schema
   const [summary, setSummary] = useState({
-    total: 0,
-    valid: 0,
-    expiring: 0,
-    expired: 0,
-    upcomingExpiries: []
+    compliance_score: 0,
+    total_required_documents: 0,
+    total_active_documents: 0,
+    total_expired_or_missing: 0,
+    upcoming_expiries: []
   });
+  
+  const [recentDocs, setRecentDocs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const fetchDashboardData = async () => {
     setLoading(true);
+    setError("");
     try {
       const token = localStorage.getItem("access_token"); 
 
@@ -36,16 +43,16 @@ export default function Dashboard() {
         return;
       }
 
-      // 1. Fetch Dashboard Stats
+      // Fetch Summary Stats (Your newly updated backend route)
       const statsRes = await fetch("http://localhost:8000/api/dashboard/summary", {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
-      // 2. Fetch User Profile Name
+      // Fetch Actual Documents for the bottom section
+      const docsRes = await fetch("http://localhost:8000/api/vault/documents", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
       const profileData = await getProfile();
       
       if (statsRes.ok) {
@@ -53,7 +60,12 @@ export default function Dashboard() {
         setSummary(statsData);
       }
 
-      // Combine first and last name if they exist
+      if (docsRes.ok) {
+        const docsData = await docsRes.json();
+        const sortedDocs = docsData.sort((a, b) => b.id - a.id).slice(0, 4);
+        setRecentDocs(sortedDocs);
+      }
+
       if (profileData.first_name) {
         setUserName(`${profileData.first_name} ${profileData.last_name || ""}`);
       } else {
@@ -84,7 +96,6 @@ export default function Dashboard() {
             
             <div className="flex justify-between items-end">
               <div>
-                {/* Dynamically display the user's name */}
                 <h1 className="text-3xl font-black text-slate-900 tracking-tight">
                   Welcome back, <span className="text-indigo-600">{userName || "User"}</span>
                 </h1>
@@ -107,49 +118,56 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* Top Summary Cards */}
+            {/* 2. Top Summary Cards Mapped to New Backend Variables */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              <DashboardCard title="Total Permits">
+              
+              {/* Compliance Score Card */}
+              <DashboardCard title="Compliance Score">
                 <div className="flex items-center justify-between mt-2">
-                  <p className="text-4xl font-black text-indigo-600">{summary.total}</p>
-                  <div className="p-3 bg-indigo-50 rounded-2xl text-indigo-500">
-                    <DocumentTextIcon className="h-6 w-6" />
+                  <p className={`text-4xl font-black ${summary.compliance_score >= 100 ? "text-emerald-600" : summary.compliance_score >= 50 ? "text-amber-500" : "text-rose-600"}`}>
+                    {summary.compliance_score}%
+                  </p>
+                  <div className={`p-3 rounded-2xl ${summary.compliance_score >= 100 ? "bg-emerald-50 text-emerald-500" : "bg-indigo-50 text-indigo-500"}`}>
+                    <ShieldCheckIcon className="h-6 w-6" />
                   </div>
                 </div>
               </DashboardCard>
 
-              <DashboardCard title="Valid Permits">
+              {/* Active Permits */}
+              <DashboardCard title="Active Permits">
                 <div className="flex items-center justify-between mt-2">
-                  <p className="text-4xl font-black text-emerald-600">{summary.valid}</p>
-                  <div className="p-3 bg-emerald-50 rounded-2xl text-emerald-500">
+                  <p className="text-4xl font-black text-indigo-600">{summary.total_active_documents}</p>
+                  <div className="p-3 bg-indigo-50 rounded-2xl text-indigo-500">
                     <CheckCircleIcon className="h-6 w-6" />
                   </div>
                 </div>
               </DashboardCard>
 
-              <DashboardCard title="Expiring Soon">
+              {/* Expired or Missing */}
+              <DashboardCard title="Missing / Expired">
                 <div className="flex items-center justify-between mt-2">
-                  <p className="text-4xl font-black text-amber-500">{summary.expiring}</p>
-                  <div className="p-3 bg-amber-50 rounded-2xl text-amber-500">
+                  <p className="text-4xl font-black text-rose-600">{summary.total_expired_or_missing}</p>
+                  <div className="p-3 bg-rose-50 rounded-2xl text-rose-500">
                     <ExclamationTriangleIcon className="h-6 w-6" />
                   </div>
                 </div>
               </DashboardCard>
 
-              <DashboardCard title="Expired">
+              {/* Total Required Types */}
+              <DashboardCard title="Required Categories">
                 <div className="flex items-center justify-between mt-2">
-                  <p className="text-4xl font-black text-rose-600">{summary.expired}</p>
-                  <div className="p-3 bg-rose-50 rounded-2xl text-rose-500">
-                    <XCircleIcon className="h-6 w-6" />
+                  <p className="text-4xl font-black text-slate-700">{summary.total_required_documents}</p>
+                  <div className="p-3 bg-slate-100 rounded-2xl text-slate-500">
+                    <DocumentTextIcon className="h-6 w-6" />
                   </div>
                 </div>
               </DashboardCard>
             </div>
 
-            {/* Upcoming Expiries List */}
+            {/* 3. Upcoming Expiries List */}
             <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
               <div className="px-8 py-6 border-b border-slate-50 flex justify-between items-center bg-slate-50/30">
-                <h3 className="font-black text-slate-800 text-lg uppercase tracking-tight">Priority Renewals</h3>
+                <h3 className="font-black text-slate-800 text-lg uppercase tracking-tight">Priority Renewals (90 Days)</h3>
                 <span className="text-[10px] font-black bg-white border border-slate-200 text-slate-400 px-3 py-1 rounded-full uppercase tracking-widest">
                   Action Required
                 </span>
@@ -161,8 +179,8 @@ export default function Dashboard() {
                     [1, 2].map((i) => (
                       <div key={i} className="h-20 bg-slate-50 animate-pulse rounded-2xl"></div>
                     ))
-                  ) : summary.upcomingExpiries?.length > 0 ? (
-                    summary.upcomingExpiries.map((permit) => (
+                  ) : summary.upcoming_expiries?.length > 0 ? (
+                    summary.upcoming_expiries.map((permit) => (
                       <div
                         key={permit.id}
                         className="flex flex-col sm:flex-row sm:items-center justify-between p-6 bg-slate-50/50 border border-slate-100 rounded-2xl hover:bg-white hover:shadow-lg transition-all duration-300 group"
@@ -172,7 +190,8 @@ export default function Dashboard() {
                             {permit.title}
                           </h4>
                           <p className="text-xs font-black text-slate-400 uppercase tracking-widest mt-1">
-                            {permit.issuing_authority}
+                            {/* Format the enum string to be readable (e.g., KRA_COMPLIANCE_CERTIFICATE -> KRA COMPLIANCE CERTIFICATE) */}
+                            {permit.document_type.replace(/_/g, ' ')}
                           </p>
                         </div>
 
@@ -182,14 +201,15 @@ export default function Dashboard() {
                           </p>
                           <span
                             className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-tighter border ${
-                              permit.days_left <= 7
+                              permit.days_remaining <= 7
                                 ? "bg-rose-50 text-rose-700 border-rose-100"
-                                : permit.days_left <= 30
+                                : permit.days_remaining <= 30
                                 ? "bg-amber-50 text-amber-700 border-amber-100"
                                 : "bg-emerald-50 text-emerald-700 border-emerald-100"
                             }`}
                           >
-                            {permit.days_left} days left
+                            {/* Updated from days_left to days_remaining based on your schema */}
+                            {permit.days_remaining} days left
                           </span>
                         </div>
                       </div>

@@ -8,7 +8,8 @@ import {
   CalendarIcon,
   ExclamationCircleIcon,
   CheckCircleIcon,
-  FunnelIcon
+  FunnelIcon,
+  SparklesIcon // Added for AI notifications
 } from "@heroicons/react/24/outline";
 
 export default function Reminders() {
@@ -28,7 +29,8 @@ export default function Reminders() {
           return;
         }
 
-        // Adjust this URL to match your specific reminders or notifications endpoint
+        // Currently fetching from Dashboard summary. 
+        // Future IT Upgrade: Change this to `/api/notifications`
         const response = await fetch("http://localhost:8000/api/dashboard/summary", {
           headers: {
             "Authorization": `Bearer ${token}`,
@@ -39,8 +41,9 @@ export default function Reminders() {
         if (!response.ok) throw new Error("Could not load your alerts.");
 
         const data = await response.json();
-        // Using upcomingExpiries as the data source for reminders
-        setReminders(data.upcomingExpiries || []);
+        
+        // BUG FIX: Updated to match FastAPI's 'upcoming_expiries'
+        setReminders(data.upcoming_expiries || []);
 
       } catch (err) {
         console.error("Reminders Fetch Error:", err);
@@ -53,21 +56,28 @@ export default function Reminders() {
     fetchReminders();
   }, [navigate]);
 
-  const getStatusBadge = (daysLeft) => {
-    if (daysLeft < 0) return {
-      text: "Overdue",
+  // Updated to handle standard notifications vs Expiry alerts
+  const getNotificationStyle = (daysRemaining) => {
+    if (daysRemaining < 0) return {
+      badge: "Overdue",
       style: "bg-rose-100 text-rose-700 border-rose-200",
-      icon: <ExclamationCircleIcon className="h-4 w-4 mr-1" />
+      icon: <ExclamationCircleIcon className="h-4 w-4 mr-1" />,
+      bgIcon: <ExclamationCircleIcon className="h-6 w-6 text-rose-500" />,
+      bgContainer: "bg-rose-50"
     };
-    if (daysLeft <= 30) return {
-      text: "Urgent",
+    if (daysRemaining <= 30) return {
+      badge: "Urgent",
       style: "bg-amber-100 text-amber-700 border-amber-200",
-      icon: <ClockIcon className="h-4 w-4 mr-1" />
+      icon: <ClockIcon className="h-4 w-4 mr-1" />,
+      bgIcon: <ClockIcon className="h-6 w-6 text-amber-500" />,
+      bgContainer: "bg-amber-50"
     };
     return {
-      text: "Upcoming",
-      style: "bg-blue-100 text-blue-700 border-blue-200",
-      icon: <CalendarIcon className="h-4 w-4 mr-1" />
+      badge: "Upcoming",
+      style: "bg-indigo-100 text-indigo-700 border-indigo-200",
+      icon: <CalendarIcon className="h-4 w-4 mr-1" />,
+      bgIcon: <BellIcon className="h-6 w-6 text-indigo-400" />,
+      bgContainer: "bg-indigo-50"
     };
   };
 
@@ -88,8 +98,8 @@ export default function Reminders() {
                   <BellIcon className="h-8 w-8 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Reminders</h1>
-                  <p className="text-slate-500 font-medium">Auto-generated compliance alerts for your SME.</p>
+                  <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Notifications</h1>
+                  <p className="text-slate-500 font-medium">Auto-generated compliance alerts and system updates.</p>
                 </div>
               </div>
               
@@ -106,62 +116,60 @@ export default function Reminders() {
               </div>
             )}
 
-            {/* Reminders Feed */}
+            {/* Notifications Feed */}
             <div className="space-y-4">
               {loading ? (
-                // Loading Skeletons
                 [1, 2, 3].map((i) => (
                   <div key={i} className="h-24 bg-white border border-slate-100 rounded-2xl animate-pulse" />
                 ))
               ) : reminders.length > 0 ? (
                 reminders.map((reminder) => {
-                  const status = getStatusBadge(reminder.daysLeft);
+                  // BUG FIX: Updated to 'days_remaining' to match backend
+                  const styles = getNotificationStyle(reminder.days_remaining);
                   return (
                     <div
                       key={reminder.id}
-                      className="group flex items-center justify-between p-6 bg-white border border-slate-200 rounded-2xl hover:border-indigo-300 hover:shadow-xl hover:shadow-indigo-50/50 transition-all duration-300"
+                      className="group flex flex-col sm:flex-row sm:items-center justify-between p-6 bg-white border border-slate-200 rounded-2xl hover:border-indigo-300 hover:shadow-xl hover:shadow-indigo-50/50 transition-all duration-300"
                     >
-                      <div className="flex items-center space-x-5">
-                        <div className={`p-3 rounded-xl ${reminder.daysLeft <= 30 ? 'bg-rose-50' : 'bg-slate-50'}`}>
-                           {reminder.daysLeft <= 30 ? (
-                             <ExclamationCircleIcon className="h-6 w-6 text-rose-500" />
-                           ) : (
-                             <BellIcon className="h-6 w-6 text-slate-400" />
-                           )}
+                      <div className="flex items-center space-x-5 mb-4 sm:mb-0">
+                        <div className={`p-3 rounded-xl ${styles.bgContainer}`}>
+                           {styles.bgIcon}
                         </div>
                         
                         <div>
-                          <h3 className="text-lg font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
-                            {reminder.name} Renewal
+                          {/* BUG FIX: Updated to 'title' to match backend */}
+                          <h3 className="text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                            {reminder.title}
                           </h3>
-                          <div className="flex items-center mt-1 text-sm text-slate-500 font-medium">
+                          <div className="flex items-center mt-1 text-xs text-slate-500 font-medium">
                             <CalendarIcon className="h-4 w-4 mr-1.5" />
-                            Due: {reminder.expiryDate}
+                            {/* BUG FIX: Updated to 'expiry_date' */}
+                            Action required by: {reminder.expiry_date}
                           </div>
                         </div>
                       </div>
 
-                      <div className="flex flex-col items-end space-y-2">
-                        <span className={`flex items-center px-3 py-1 text-xs font-bold rounded-full border ${status.style}`}>
-                          {status.icon}
-                          {status.text}
+                      <div className="flex sm:flex-col items-center sm:items-end justify-between sm:space-y-2">
+                        <span className={`flex items-center px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-full border ${styles.style}`}>
+                          {styles.icon}
+                          {styles.badge}
                         </span>
-                        <p className="text-xs font-bold text-slate-400 tracking-wider uppercase">
-                          {reminder.authority}
+                        <p className="text-[10px] font-black text-slate-400 tracking-wider uppercase">
+                          {/* Format the ENUM (e.g., KRA_COMPLIANCE_CERTIFICATE -> KRA COMPLIANCE CERTIFICATE) */}
+                          {reminder.document_type ? reminder.document_type.replace(/_/g, ' ') : "SYSTEM ALERT"}
                         </p>
                       </div>
                     </div>
                   );
                 })
               ) : (
-                // Empty State
                 <div className="bg-white border border-slate-200 rounded-3xl p-16 text-center">
                   <div className="inline-flex items-center justify-center p-4 bg-emerald-50 rounded-full mb-4">
                     <CheckCircleIcon className="h-10 w-10 text-emerald-500" />
                   </div>
                   <h3 className="text-xl font-bold text-slate-900">All caught up!</h3>
                   <p className="text-slate-500 max-w-xs mx-auto mt-2">
-                    No urgent compliance deadlines or reminders found at the moment.
+                    You have no new alerts. Your compliance is fully up to date.
                   </p>
                 </div>
               )}
