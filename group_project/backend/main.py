@@ -13,6 +13,7 @@ except ImportError:
     pass
 # --------------------------
 
+from core.error_logger import setup_error_handlers # <--- Good, you have the import!
 from core.config import settings
 from db.neon_session import engine, Base
 from core.scheduler import start_reminder_scheduler 
@@ -23,6 +24,7 @@ from api.routes_dashboard import router as dashboard_router
 from api.routes_knowledge import router as knowledge_router
 from api.routes_vault import router as vault_router
 from api.routes_profile import router as profile_router
+from api.admin import router as admin_router 
 
 # Initialize NeonDB Tables
 Base.metadata.create_all(bind=engine)
@@ -41,6 +43,9 @@ app = FastAPI(
     version="1.1.0",
     lifespan=lifespan
 )
+
+# --- ACTIVATE MONGODB ERROR LOGGING ---
+setup_error_handlers(app) # <--- YOU NEED TO ADD THIS LINE RIGHT HERE!
 
 # --- COOP HOTFIX MIDDLEWARE ---
 @app.middleware("http")
@@ -69,7 +74,8 @@ routers = [
     (dashboard_router, "Dashboard"),
     (knowledge_router, "Knowledge Base"),
     (ussd_router, "USSD Service"),
-    (vault_router, "Document Vault")
+    (vault_router, "Document Vault"),
+    (admin_router, "Admin") 
 ]
 
 for router, tag in routers:

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { GoogleLogin } from "@react-oauth/google"; // Changed this
+import { GoogleLogin } from "@react-oauth/google";
 import { loginUser, googleLogin } from "../services/authService";
 import { saveToken } from "../utils/auth";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
@@ -13,18 +13,26 @@ export default function SignIn() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Success handler for Google (Now receives a credential/JWT)
+  // Success handler for Google
   const handleGoogleSuccess = async (credentialResponse) => {
     setLoading(true);
     setError("");
     try {
-      // credentialResponse.credential IS the ID Token (JWT)
       const data = await googleLogin(credentialResponse.credential);
       
       if (data?.access_token) {
         saveToken(data.access_token);
         localStorage.setItem("user_id", data.user_id);
-        navigate("/dashboard"); 
+        
+        // Save the role and route accordingly
+        const userRole = data.role || "customer";
+        localStorage.setItem("user_role", userRole);
+
+        if (userRole === "admin") {
+          navigate("/admin/errors"); 
+        } else {
+          navigate("/dashboard"); 
+        }
       }
     } catch (err) {
       setError(err.message || "Google Authentication failed.");
@@ -39,10 +47,20 @@ export default function SignIn() {
     setLoading(true);
     try {
       const data = await loginUser(email, password);
+      
       if (data?.access_token) {
         saveToken(data.access_token);
         localStorage.setItem("user_id", data.user_id);
-        navigate("/dashboard"); 
+        
+        // Save the role and route accordingly
+        const userRole = data.role || "customer";
+        localStorage.setItem("user_role", userRole);
+
+        if (userRole === "admin") {
+          navigate("/admin/errors"); 
+        } else {
+          navigate("/dashboard"); 
+        }
       }
     } catch (err) {
       setError(err.message || "Invalid credentials.");
@@ -90,7 +108,6 @@ export default function SignIn() {
           <div className="flex-grow border-t border-gray-200"></div>
         </div>
 
-        {/* --- REPLACED: Official Google Button --- */}
         <div className="flex justify-center">
           <GoogleLogin
             onSuccess={handleGoogleSuccess}

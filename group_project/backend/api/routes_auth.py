@@ -56,7 +56,6 @@ async def register(
     except Exception as e:
         neon_db.delete(new_user)
         neon_db.commit()
-        print(f"❌ Registration Rollback: {e}")
         raise HTTPException(status_code=500, detail="Registration failed. Please try again later.")
 
 @router.post("/google", response_model=Token)
@@ -93,7 +92,8 @@ async def google_login(
         return {
             "access_token": access_token, 
             "token_type": "bearer",
-            "user_id": user.id
+            "user_id": user.id,
+            "role": user.role
         }
 
     except ValueError:
@@ -132,7 +132,13 @@ async def login(
         raise HTTPException(status_code=403, detail="Please verify your email address.")
 
     access_token = create_access_token(data={"sub": user.email, "id": user.id})
-    return {"access_token": access_token, "token_type": "bearer", "user_id": user.id}
+    
+    return {
+        "access_token": access_token, 
+        "token_type": "bearer", 
+        "user_id": user.id,
+        "role": user.role
+    }
 
 @router.post("/forgot-password")
 async def forgot_password(
@@ -202,5 +208,4 @@ async def request_otp(
         send_sms_otp(current_user.phone, new_otp)
         return {"message": f"OTP sent successfully to {current_user.phone}"}
     except Exception as e:
-        print(f"❌ SMS Gateway Error: {e}")
         raise HTTPException(status_code=500, detail="Failed to send SMS. Please try again later.")

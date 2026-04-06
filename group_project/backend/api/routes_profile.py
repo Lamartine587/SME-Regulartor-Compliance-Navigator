@@ -23,7 +23,8 @@ async def get_profile(
     return {
         "id": profile.id,
         "user_id": profile.user_id,
-        "email": current_user.email, # Added: Pulled from User table
+        "email": current_user.email,
+        "role": current_user.role, 
         "first_name": profile.first_name,
         "last_name": profile.last_name,
         "role_title": profile.role_title,
@@ -57,8 +58,7 @@ async def update_profile(
 
     update_data = payload.dict(exclude_unset=True)
     for key, value in update_data.items():
-        # Security: email is never allowed to be updated here
-        if hasattr(profile, key) and key not in ["phone", "email"]: 
+        if hasattr(profile, key) and key not in ["phone", "email", "role"]: 
             setattr(profile, key, value)
 
     neon_db.commit()
@@ -67,7 +67,8 @@ async def update_profile(
     return {
         "id": profile.id,
         "user_id": profile.user_id,
-        "email": current_user.email, # Return the same email
+        "email": current_user.email,
+        "role": current_user.role, 
         "first_name": profile.first_name,
         "last_name": profile.last_name,
         "role_title": profile.role_title,

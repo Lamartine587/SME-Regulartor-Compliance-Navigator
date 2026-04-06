@@ -6,12 +6,13 @@ import {
   ClipboardDocumentCheckIcon, 
   FolderIcon, 
   BellIcon, 
-  UserIcon, // <-- Added UserIcon for the Profile link
+  UserIcon, 
   Cog6ToothIcon, 
   ArrowLeftOnRectangleIcon,
   Bars3Icon,
   XMarkIcon,
-  ShieldCheckIcon
+  ShieldCheckIcon,
+  BugAntIcon
 } from "@heroicons/react/24/outline";
 
 export default function Sidebar() {
@@ -19,13 +20,14 @@ export default function Sidebar() {
   const navigate = useNavigate();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
-  // Main navigation links (All lowercase to match App.jsx)
+  const userRole = localStorage.getItem("user_role");
+
   const menuItems = [
     { path: "/dashboard", label: "Dashboard", icon: HomeIcon },
     { path: "/permits", label: "Permits", icon: ClipboardDocumentCheckIcon },
     { path: "/document-vault", label: "Document Vault", icon: FolderIcon },
     { path: "/reminders", label: "Reminders", icon: BellIcon },
-    { path: "/profile", label: "Profile", icon: UserIcon }, // <-- ADDED PROFILE HERE
+    { path: "/profile", label: "Profile", icon: UserIcon }, 
   ];
 
   const isActive = (path) => location.pathname === path;
@@ -37,7 +39,6 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* Mobile Toggle Button */}
       <button
         onClick={() => setIsMobileOpen(true)}
         className={`lg:hidden fixed top-4 left-4 z-50 p-2.5 bg-indigo-600 text-white rounded-xl shadow-lg ${isMobileOpen ? "hidden" : "block"}`}
@@ -45,13 +46,11 @@ export default function Sidebar() {
         <Bars3Icon className="w-6 h-6" />
       </button>
 
-      {/* Sidebar Container */}
       <aside
         className={`fixed lg:static inset-y-0 left-0 z-50 w-72 bg-slate-950 transform transition-transform duration-300 ease-in-out flex flex-col ${
           isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
-        {/* Logo Section */}
         <div className="p-6 h-20 border-b border-slate-800 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="bg-indigo-600 p-2 rounded-lg">
@@ -67,7 +66,6 @@ export default function Sidebar() {
           </button>
         </div>
 
-        {/* Main Menu Links */}
         <nav className="flex-1 px-4 py-8 space-y-1.5 overflow-y-auto">
           <p className="px-4 text-[10px] font-bold text-slate-600 uppercase tracking-[0.2em] mb-4">Main Menu</p>
           
@@ -87,17 +85,29 @@ export default function Sidebar() {
               <span className="text-sm tracking-tight">{item.label}</span>
             </Link>
           ))}
+
+          {userRole === "admin" && (
+            <div className="pt-4 mt-4 border-t border-slate-800">
+              <p className="px-4 text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-2">
+                System Admin
+              </p>
+              <Link 
+                to="/admin/errors" 
+                className="flex items-center px-4 py-3 text-sm font-bold text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all"
+              >
+                <BugAntIcon className="h-5 w-5 mr-3" />
+                Error Monitor
+              </Link>
+            </div>
+          )}
         </nav>
 
-        {/* Bottom Actions */}
         <div className="p-4 border-t border-slate-900 space-y-1">
-          {/* Settings Button */}
           <button className="flex w-full items-center px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-200 hover:bg-slate-900 rounded-xl transition-all group">
             <Cog6ToothIcon className="h-5 w-5 mr-3 text-slate-600 group-hover:text-slate-400" />
             Settings
           </button>
           
-          {/* Logout Button */}
           <button onClick={handleLogout} className="flex w-full items-center px-4 py-3 text-sm font-bold text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all">
             <ArrowLeftOnRectangleIcon className="h-5 w-5 mr-3 text-rose-500/70" />
             Sign Out
@@ -105,7 +115,6 @@ export default function Sidebar() {
         </div>
       </aside>
 
-      {/* Mobile Backdrop Overlay */}
       {isMobileOpen && <div onClick={() => setIsMobileOpen(false)} className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity" />}
     </>
   );

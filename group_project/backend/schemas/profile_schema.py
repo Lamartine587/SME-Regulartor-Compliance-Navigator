@@ -16,6 +16,7 @@ class ProfileResponse(ProfileUpdate):
     id: int
     user_id: int
     email: str
+    role: str
     is_phone_verified: bool
     updated_at: datetime
 

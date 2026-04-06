@@ -17,7 +17,8 @@ class OTPVerify(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
-    user_id: int  # <-- This prevents the 422 on login
+    user_id: int
+    role: str = "customer"
 
 class ForgotPassword(BaseModel):
     email: EmailStr
