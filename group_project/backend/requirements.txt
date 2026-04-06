@@ -40,3 +40,9 @@ apscheduler
 
 # OpenAI-compatible SDK (Featherless uses this format)
 openai
+
+#Extra's to deal with sms and gen-ai
+google-generativeai
+bafredo-devsms
+google-auth
+google-genai
