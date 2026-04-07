@@ -142,10 +142,19 @@ Clone the repository and install backend dependencies:
 ```bash
 git clone <your-repository-url>
 cd group_project/backend
-#load python virtual environment
+
+#load/install python virtual environment
 python3 -m venv venv
+
 #activate it
+1. on Linux Treminal
 source venv/bin/activate
+
+2. on Windows powershell
+.\venv\Scripts\Activate
+//alternative windows powershell if doesn't work
+.\venv\Scripts\Activate.ps1
+
 pip install -r requirements.txt
 #Run the app
 #main is the main file_name, reload for re-run every time you make changes
