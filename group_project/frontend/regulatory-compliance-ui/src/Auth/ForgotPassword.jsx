@@ -33,39 +33,41 @@ export default function ForgotPassword() {
       }
     } catch (err) {
       setError("Network error, please try again.");
+      console.error("error", err.message);
+      
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 to-indigo-900 p-4">
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 dark:from-slate-950 to-indigo-900 dark:to-indigo-950 p-4">
       
-      <form onSubmit={handleSubmit} className="bg-white p-10 rounded-2xl shadow-2xl w-full max-w-md space-y-6">
+      <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-800 p-10 rounded-2xl shadow-2xl w-full max-w-md space-y-6">
         
         <div className="text-center space-y-2 mb-8">
-          <h2 className="text-3xl font-extrabold text-gray-900">Forgot Password</h2>
-          <p className="text-sm text-gray-500">
+          <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white">Forgot Password</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             Enter your email address and we will send you a 6-digit verification code.
           </p>
         </div>
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Address</label>
             <input
               required
               type="email"
               placeholder="you@company.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors outline-none bg-gray-50"
+              className="w-full border border-gray-300 dark:border-gray-600 p-3 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors outline-none bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white " 
             />
           </div>
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-center text-sm font-medium">
+          <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-400 p-3 rounded-lg text-center text-sm font-medium">
             {error}
           </div>
         )}
@@ -82,10 +84,10 @@ export default function ForgotPassword() {
           {loading ? "Sending Code..." : "Send OTP"}
         </button>
 
-        <div className="pt-4 text-center border-t border-gray-100">
+        <div className="pt-4 text-center border-t border-gray-100 dark:border-gray-700">
           <Link
             to="/login"
-            className="text-sm text-indigo-600 font-semibold hover:underline"
+            className="text-sm text-indigo-600 dark:text-indigo-400 font-semibold hover:underline"
           >
             &larr; Back to Sign In
           </Link>

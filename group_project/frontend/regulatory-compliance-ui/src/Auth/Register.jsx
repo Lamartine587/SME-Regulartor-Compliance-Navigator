@@ -64,23 +64,23 @@ export default function Register() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 to-indigo-900 p-4 font-sans">
-      <form onSubmit={handleSubmit} className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md space-y-5">
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 dark:from-slate-950 to-indigo-900 dark:to-indigo-950 p-4 font-sans">
+      <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-2xl w-full max-w-md space-y-5">
         
         <div className="text-center space-y-1 mb-6">
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight">Create Account</h2>
-          <p className="text-xs text-slate-500 font-medium">SME Regulatory Compliance Navigator</p>
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Create Account</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">SME Regulatory Compliance Navigator</p>
         </div>
 
         <div className="space-y-4">
           <div>
-            <label className="block text-[10px] font-black text-slate-700 uppercase tracking-widest mb-1">Email Address</label>
-            <input required type="email" placeholder="manager@sme.co.ke" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm" />
+            <label className="block text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-1">Email Address</label>
+            <input required type="email" placeholder="manager@sme.co.ke" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-slate-200 dark:border-slate-600 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-sm" />
           </div>
 
           <div>
-            <label className="block text-[10px] font-black text-slate-700 uppercase tracking-widest mb-1">
-              Phone Number <span className="text-indigo-600 lowercase font-bold">(+254 format)</span>
+            <label className="block text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-1">
+              Phone Number <span className="text-indigo-600 dark:text-indigo-400 lowercase font-bold">(+254 format)</span>
             </label>
             <input 
               required 
@@ -88,43 +88,43 @@ export default function Register() {
               placeholder="+2547XXXXXXXX" 
               value={phone} 
               onChange={handlePhoneChange} 
-              className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-mono font-bold tracking-wider" 
+              className="w-full border border-slate-200 dark:border-slate-600 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-sm font-mono font-bold tracking-wider" 
             />
-            <p className="text-[9px] text-slate-400 mt-1 italic font-medium text-center">Required for SMS: +254 followed by 9 digits.</p>
+            <p className="text-[9px] text-slate-400 dark:text-slate-500 mt-1 italic font-medium text-center">Required for SMS: +254 followed by 9 digits.</p>
           </div>
 
           <div className="relative">
-            <label className="block text-[10px] font-black text-slate-700 uppercase tracking-widest mb-1">Password</label>
-            <input required type={showPassword ? "text" : "password"} placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 pr-10 text-sm" />
-            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-8 text-slate-400">
+            <label className="block text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-1">Password</label>
+            <input required type={showPassword ? "text" : "password"} placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full border border-slate-200 dark:border-slate-600 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white pr-10 text-sm" />
+            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-8 text-slate-400 dark:text-slate-500">
               {showPassword ? <EyeSlashIcon className="h-4 w-4"/> : <EyeIcon className ="h-4 w-4"/>}
             </button>
           </div>
 
           <div className="relative">
-            <label className="block text-[10px] font-black text-slate-700 uppercase tracking-widest mb-1">Confirm Password</label>
-            <input required type={showConfirmPassword ? "text" : "password"} placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} onFocus={() => setShowPasswordError(true)} disabled={!passwordValid} className={`w-full border p-3 rounded-xl outline-none pr-10 text-sm ${!passwordValid ? "bg-slate-100 text-slate-400 cursor-not-allowed" : "bg-slate-50 focus:ring-2 focus:ring-indigo-500 border-slate-200"}`} />
-            <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} disabled={!passwordValid} className="absolute right-3 top-8 text-slate-400">
+            <label className="block text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-1">Confirm Password</label>
+            <input required type={showConfirmPassword ? "text" : "password"} placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} onFocus={() => setShowPasswordError(true)} disabled={!passwordValid} className={`w-full border p-3 rounded-xl outline-none pr-10 text-sm ${!passwordValid ? "bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed" : "bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 border-slate-200 dark:border-slate-600"}`} />
+            <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} disabled={!passwordValid} className="absolute right-3 top-8 text-slate-400 dark:text-slate-500">
               {showConfirmPassword ? <EyeSlashIcon className="h-4 w-4"/> : <EyeIcon className ="h-4 w-4"/>}
             </button>
           </div>
         </div>
 
         {password && !passwordValid && showPasswordError && (
-          <div className="bg-amber-50 border border-amber-200 text-amber-900 p-3 rounded-xl text-[10px] font-medium">
+          <div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 text-amber-900 dark:text-amber-300 p-3 rounded-xl text-[10px] font-medium">
             <span className="font-black uppercase tracking-tighter block mb-1">Security Standards:</span>
             <ul className="list-disc pl-4 space-y-0.5">{failedRules.map((r, i) => <li key={i}>{r}</li>)}</ul>
           </div>
         )}
 
-        {error && <div className="bg-rose-50 text-rose-700 p-3 rounded-xl text-center text-[10px] font-black uppercase tracking-tight border border-rose-100">{error}</div>}
+        {error && <div className="bg-rose-50 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 p-3 rounded-xl text-center text-[10px] font-black uppercase tracking-tight border border-rose-100 dark:border-rose-700">{error}</div>}
 
         <button type="submit" disabled={loading} className={`w-full p-4 rounded-xl text-white text-xs font-black uppercase tracking-widest transition-all shadow-md ${loading ? "bg-indigo-400" : "bg-indigo-600 hover:bg-indigo-700"}`}>
           {loading ? "Creating Profile..." : "Create Account"}
         </button>
 
-        <p className="text-center text-[11px] text-slate-500 font-medium">
-          Already have an account? <button type="button" onClick={() => navigate('/login')} className="text-indigo-600 font-black hover:underline">Sign In</button>
+        <p className="text-center text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+          Already have an account? <button type="button" onClick={() => navigate('/login')} className="text-indigo-600 dark:text-indigo-400 font-black hover:underline">Sign In</button>
         </p>
 
       </form>
