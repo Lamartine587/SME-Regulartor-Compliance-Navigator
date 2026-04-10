@@ -167,7 +167,7 @@ export default function Permits() {
                 <button 
                   // Opens the pop-up modal instead of navigating
                   onClick={() => setIsUploadModalOpen(true)}
-                  className="flex items-center px-5 py-2.5 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200"
+                  className="flex items-center px-5 py-2.5 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-lg dark:shadow-indigo-900 shadow-indigo-200"
                 >
                   <PlusIcon className="h-5 w-5 mr-2" />
                   New Upload

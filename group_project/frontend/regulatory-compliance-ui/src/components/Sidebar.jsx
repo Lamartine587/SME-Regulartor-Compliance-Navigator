@@ -49,7 +49,7 @@ export default function Sidebar() {
           isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
-        <div className="p-6 h-20 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+        <div className="p-6 lg:h-[12%] h-[15%] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="bg-indigo-600 p-2 rounded-lg">
               <ShieldCheckIcon className="h-6 w-6 text-white" />

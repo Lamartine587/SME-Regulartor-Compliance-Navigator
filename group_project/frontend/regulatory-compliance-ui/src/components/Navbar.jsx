@@ -57,7 +57,7 @@ export default function Navbar() {
   }, []);
 
   return (
-    <nav className="sticky top-0 z-40 w-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 px-6 py-3 lg:h-16 flex justify-between items-center transition-all">
+    <nav className="sticky top-0 z-40 w-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 px-6 py-3 lg:h-[12%] h-[15%] flex justify-between items-center transition-all">
       
       {/* Left side: Breadcrumb */}
       <div className="hidden md:block">
@@ -86,7 +86,7 @@ export default function Navbar() {
             }`}
           >
             {/* Dynamic Initials based on Name */}
-            <div className="w-9 h-9 bg-gradient-to-tr from-indigo-600 to-indigo-500 text-white rounded-xl flex items-center justify-center text-sm font-bold shadow-md shadow-indigo-200">
+            <div className="w-9 h-9 bg-gradient-to-tr from-indigo-600 to-indigo-500 text-white rounded-xl flex items-center justify-center text-sm font-bold shadow-md dark:shadow-indigo-900 shadow-indigo-200">
               {user.initials}
             </div>
             
