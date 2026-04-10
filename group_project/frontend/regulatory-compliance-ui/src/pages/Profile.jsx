@@ -153,7 +153,7 @@ export default function Profile() {
           <div className="max-w-4xl mx-auto space-y-8">
             <div className="flex justify-between items-end">
               <div>
-                <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Account Settings</h1>
+                <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Profile Settings</h1>
                 <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">Manage your professional and business identity.</p>
               </div>
             </div>
