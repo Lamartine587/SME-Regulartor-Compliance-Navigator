@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { verifyOTP } from "../services/authService";
+import api from "../utils/api"; // Make sure to import your API client
 
 export default function VerifyOTP() {
   const navigate = useNavigate();
@@ -8,23 +9,59 @@ export default function VerifyOTP() {
   
   const email = location.state?.email || "";
   const userId = location.state?.userId;
+  const purpose = location.state?.purpose; 
 
   const [emailOtp, setEmailOtp] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    if (!email) {
+      navigate("/Auth/SignIn");
+    }
+  }, [email, navigate]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
-    if (!emailOtp) return setError("Please enter your verification code.");
-    if (!userId) return setError("Session expired. Please return to the registration page.");
+    if (!emailOtp || emailOtp.length !== 6) {
+      return setError("Please enter the full 6-digit verification code.");
+    }
 
     setLoading(true);
 
+    // --- PASSWORD RESET STRICT VERIFICATION ---
+    if (purpose === "password_reset") {
+      try {
+        // Actually verify the code with the backend BEFORE moving on
+        await api.post("/auth/verify-reset-otp", {
+          email: email,
+          otp_code: emailOtp
+        });
+
+        setSuccess("Code verified! Redirecting...");
+        setTimeout(() => {
+          navigate("/reset-password", { 
+            state: { email: email, otpCode: emailOtp } 
+          });
+        }, 1000);
+      } catch (err) {
+        setError(err.response?.data?.detail || "Invalid code. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+      return; 
+    }
+
+    // --- STANDARD REGISTRATION LOGIC ---
+    if (!userId) {
+      setLoading(false);
+      return setError("Session expired. Please return to the registration page.");
+    }
+
     try {
-      // Sending the exact payload structure your backend expects
       await verifyOTP({
         user_id: parseInt(userId),
         verification_type: "email",
@@ -32,7 +69,7 @@ export default function VerifyOTP() {
       });
 
       setSuccess("Email verified! Redirecting to login...");
-      setTimeout(() => navigate("/login"), 2000);
+      setTimeout(() => navigate("/Auth/SignIn"), 2000);
 
     } catch (err) {
       setError(err.message || "Invalid code. Please try again.");
@@ -40,6 +77,8 @@ export default function VerifyOTP() {
       setLoading(false);
     }
   };
+
+  if (!email) return null; 
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 to-indigo-900 p-4">
@@ -53,15 +92,27 @@ export default function VerifyOTP() {
 
         <div className="space-y-4">
           <div>
-            <input required type="text" placeholder="000000" maxLength="6" value={emailOtp} onChange={(e) => setEmailOtp(e.target.value.replace(/\D/g, ''))} className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-gray-50 text-center tracking-[0.5em] text-xl font-mono" />
+            <input 
+              required 
+              type="text" 
+              placeholder="000000" 
+              maxLength="6" 
+              value={emailOtp} 
+              onChange={(e) => setEmailOtp(e.target.value.replace(/\D/g, ''))} 
+              className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-gray-50 text-center tracking-[0.5em] text-xl font-mono" 
+            />
           </div>
         </div>
 
         {error && <div className="bg-red-50 text-red-700 p-3 rounded-lg text-center text-sm font-medium">{error}</div>}
         {success && <div className="bg-green-50 text-green-700 p-3 rounded-lg text-center text-sm font-medium">{success}</div>}
 
-        <button type="submit" disabled={!emailOtp || loading} className="w-full p-3 rounded-lg text-white font-semibold bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 transition-colors">
-          {loading ? "Verifying..." : "Verify & Login"}
+        <button 
+          type="submit" 
+          disabled={!emailOtp || loading} 
+          className="w-full p-3 rounded-lg text-white font-semibold bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 transition-colors"
+        >
+          {loading ? "Verifying..." : "Verify Code"}
         </button>
       </form>
     </div>

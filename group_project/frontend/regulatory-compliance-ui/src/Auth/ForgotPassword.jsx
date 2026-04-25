@@ -27,12 +27,16 @@ export default function ForgotPassword() {
       if (data?.detail && Array.isArray(data.detail) && data.detail.length > 0) {
         setError(data.detail[0].msg || "Failed to send OTP. Please try again.");
       } else {
-        // Success: Store the email so VerifyOTP can grab it, then navigate
-        sessionStorage.setItem("resetEmail", email);
-        navigate("/verify-otp");
+        // SUCCESS: Send to Verify OTP page with the purpose flag
+        navigate("/verify-otp", { 
+          state: { 
+            email: email,
+            purpose: "password_reset" 
+          } 
+        });
       }
     } catch (err) {
-      setError("Network error, please try again.");
+      setError(err.response?.data?.detail || "Network error, please try again.");
     } finally {
       setLoading(false);
     }
@@ -83,8 +87,9 @@ export default function ForgotPassword() {
         </button>
 
         <div className="pt-4 text-center border-t border-gray-100">
+          {/* FIXED: Now matches your App.jsx routing */}
           <Link
-            to="/login"
+            to="/Auth/SignIn"
             className="text-sm text-indigo-600 font-semibold hover:underline"
           >
             &larr; Back to Sign In

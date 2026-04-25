@@ -1,10 +1,15 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { resetPassword } from "../services/authService";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
+import api from "../utils/api"; // Using your api utility to hit the backend
 
 export default function ResetPassword() {
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Securely grab the email and OTP code passed from the VerifyOTP page
+  const email = location.state?.email;
+  const otpCode = location.state?.otpCode;
   
   // Form State
   const [password, setPassword] = useState("");
@@ -17,7 +22,12 @@ export default function ResetPassword() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const email = sessionStorage.getItem("resetEmail");
+  // Security Route Guard: If they didn't come from VerifyOTP, kick them out
+  useEffect(() => {
+    if (!email || !otpCode) {
+      navigate("/Auth/SignIn");
+    }
+  }, [email, otpCode, navigate]);
 
   // Password Rules validation
   const passwordRules = {
@@ -38,10 +48,6 @@ export default function ResetPassword() {
     e.preventDefault();
     setError("");
 
-    if (!email) {
-      return setError("Session expired. Please restart the password reset process.");
-    }
-
     if (!passwordValid) {
       return setError("Password must include: " + failedRules.join(", "));
     }
@@ -52,22 +58,24 @@ export default function ResetPassword() {
 
     setLoading(true);
     try {
-      // Assuming your authService expects (email, old_password, new_password)
-      const data = await resetPassword(email, "", password); 
+      // Send the exact payload the FastAPI backend schema expects
+      await api.post("/auth/reset-password", {
+        email: email,
+        otp_code: otpCode,
+        new_password: password
+      });
       
-      if (data?.detail && Array.isArray(data.detail) && data.detail.length > 0) {
-        setError(data.detail[0].msg || "Password reset failed.");
-      } else {
-        // Success: Clean up session storage and route to login
-        sessionStorage.removeItem("resetEmail");
-        navigate("/login"); // Updated to match the route defined in App.jsx
-      }
+      // Success: Route back to login to test the new credentials
+      navigate("/Auth/SignIn", { state: { message: "Password reset successfully! Please sign in." } });
+      
     } catch (err) {
-      setError("Network error, please try again.");
+      setError(err.response?.data?.detail || "Failed to reset password. The code may have expired.");
     } finally {
       setLoading(false);
     }
   };
+
+  if (!email || !otpCode) return null; // Prevent UI flicker during redirect
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 to-indigo-900 p-4">
@@ -103,7 +111,7 @@ export default function ResetPassword() {
           {/* Confirm Password Field */}
           <div className="relative">
             <label className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
-            <input
+            <input    
               required
               type={showConfirmPassword ? "text" : "password"}
               placeholder="••••••••"

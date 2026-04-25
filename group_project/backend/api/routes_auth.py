@@ -1,6 +1,6 @@
 import random
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -21,8 +21,15 @@ from models.user_model import User
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
+OTP_EXPIRATION_MINUTES = 15
+
 class GoogleLoginRequest(BaseModel):
     token: str
+
+# Added schema for the intermediate reset OTP check
+class VerifyResetOTPRequest(BaseModel):
+    email: str
+    otp_code: str
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register(
@@ -54,8 +61,9 @@ async def register(
         return {"message": "Registration successful. Please check SMS and Email.", "user_id": new_user.id}
 
     except Exception as e:
-        neon_db.delete(new_user)
-        neon_db.commit()
+        # Rollback SQL and Mongo if OTP sending fails
+        auth_service.delete_user(neon_db, new_user.id) # Assuming you add this to auth_service
+        await mongo_db.otps.delete_many({"user_id": new_user.id})
         raise HTTPException(status_code=500, detail="Registration failed. Please try again later.")
 
 @router.post("/google", response_model=Token)
@@ -106,8 +114,14 @@ async def verify_otp(
     mongo_db=Depends(get_mongo_db)
 ):
     record = await mongo_db.otps.find_one({"user_id": payload.user_id})
+    
     if not record:
-        raise HTTPException(status_code=400, detail="OTP expired or invalid.")
+        raise HTTPException(status_code=400, detail="OTP invalid or does not exist.")
+
+    # Time expiration check
+    time_elapsed = datetime.now(timezone.utc) - record.get("createdAt").replace(tzinfo=timezone.utc)
+    if time_elapsed > timedelta(minutes=OTP_EXPIRATION_MINUTES):
+        raise HTTPException(status_code=400, detail="OTP has expired. Please request a new one.")
 
     if payload.verification_type == "sms" and payload.otp_code == record.get('sms_otp'):
         auth_service.update_verification_status(neon_db, payload.user_id, "sms")
@@ -148,17 +162,45 @@ async def forgot_password(
 ):
     user = auth_service.get_user_by_email(neon_db, payload.email)
     if not user:
-        return {"message": "Reset code sent if email exists."}
+        # Return success even if user doesn't exist to prevent email enumeration attacks
+        return {"message": "If the email exists, a reset code has been sent."}
 
     reset_otp = str(random.randint(100000, 999999))
-    await mongo_db.password_resets.insert_one({
-        "email": user.email,
-        "reset_otp": reset_otp,
-        "createdAt": datetime.now(timezone.utc)
-    })
+    
+    try:
+        await mongo_db.password_resets.insert_one({
+            "email": user.email,
+            "reset_otp": reset_otp,
+            "createdAt": datetime.now(timezone.utc)
+        })
+        send_email_otp(user.email, reset_otp) 
+        return {"message": "If the email exists, a reset code has been sent."}
+    except Exception as e:
+        await mongo_db.password_resets.delete_many({"email": user.email, "reset_otp": reset_otp})
+        raise HTTPException(status_code=500, detail="Failed to send reset email. Please try again later.")
 
-    send_email_otp(user.email, reset_otp) 
-    return {"message": "Reset code sent if email exists."}
+# --- NEW ROUTE: Strictly verifies the reset code before allowing the user to change their password ---
+@router.post("/verify-reset-otp")
+async def verify_reset_otp(
+    payload: VerifyResetOTPRequest,
+    mongo_db = Depends(get_mongo_db)
+):
+    # Find the most recent OTP for this email
+    record = await mongo_db.password_resets.find_one(
+        {"email": payload.email},
+        sort=[("createdAt", -1)]
+    )
+
+    if not record or record.get('reset_otp') != payload.otp_code:
+        raise HTTPException(status_code=400, detail="Invalid reset code.")
+
+    # Time expiration check
+    time_elapsed = datetime.now(timezone.utc) - record.get("createdAt").replace(tzinfo=timezone.utc)
+    if time_elapsed > timedelta(minutes=OTP_EXPIRATION_MINUTES):
+        raise HTTPException(status_code=400, detail="Reset code has expired. Please request a new one.")
+
+    return {"message": "OTP verified successfully."}
+
 
 @router.post("/reset-password")
 async def reset_password(
@@ -171,8 +213,16 @@ async def reset_password(
         sort=[("createdAt", -1)]
     )
 
-    if not record or record.get('reset_otp') != payload.otp_code:
+    if not record:
         raise HTTPException(status_code=400, detail="Invalid or expired OTP.")
+
+    # Time expiration check
+    time_elapsed = datetime.now(timezone.utc) - record.get("createdAt").replace(tzinfo=timezone.utc)
+    if time_elapsed > timedelta(minutes=OTP_EXPIRATION_MINUTES):
+        raise HTTPException(status_code=400, detail="Reset code has expired. Please request a new one.")
+
+    if record.get('reset_otp') != payload.otp_code:
+        raise HTTPException(status_code=400, detail="Invalid OTP.")
 
     user = auth_service.get_user_by_email(neon_db, payload.email)
     if not user:
@@ -182,7 +232,6 @@ async def reset_password(
     await mongo_db.password_resets.delete_many({"email": payload.email})
 
     return {"message": "Password successfully reset."}
-
 
 @router.post("/request-otp")
 async def request_otp(

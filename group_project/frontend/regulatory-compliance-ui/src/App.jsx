@@ -26,7 +26,7 @@ function App() {
         <Route path="/" element={<LandingPage />} />
 
         <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
-        <Route path="/login" element={<PublicRoute><SignIn /></PublicRoute>} /> 
+        <Route path="/Auth/SignIn" element={<PublicRoute><SignIn /></PublicRoute>} /> 
         <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
         <Route path="/verify-otp" element={<PublicRoute><VerifyOTP/></PublicRoute>} />
         <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />
