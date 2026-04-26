@@ -8,7 +8,8 @@ import AdminRoute from "./components/AdminRoute";
 import AdminErrors from "./pages/AdminErrors";
 import Permits from "./pages/Permits";
 import Reminders from "./pages/Reminders";
-import Profile from "./pages/Profile"; 
+import Profile from "./pages/Profile";
+import Settings from "./pages/Settings"; 
 
 import Register from "./Auth/Register";
 import VerifyOTP from "./Auth/VerifyOTP";
@@ -18,10 +19,12 @@ import ResetPassword from "./Auth/ResetPassword";
 
 import ProtectedRoute from "./routes/ProtectedRoute";
 import PublicRoute from "./routes/PublicRoute";
+import { ThemeProvider } from "./contexts/ThemeContext";
 
 function App() {
   return (
-    <Router>
+    <ThemeProvider>
+      <Router>
       <Routes>
         <Route path="/" element={<LandingPage />} />
 
@@ -37,6 +40,7 @@ function App() {
         <Route path="/reminders" element={<ProtectedRoute><Reminders /></ProtectedRoute>} />
         
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 
         <Route element={<AdminRoute />}>
           <Route path="/admin/errors" element={<AdminErrors />} />
@@ -45,7 +49,8 @@ function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
-  );
+    </ThemeProvider>
+  )
 }
 
 export default App;

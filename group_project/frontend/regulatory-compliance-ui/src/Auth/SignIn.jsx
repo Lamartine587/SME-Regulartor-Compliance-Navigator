@@ -70,42 +70,42 @@ export default function SignIn() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 to-indigo-900 p-4">
-      <form onSubmit={handleSubmit} className="bg-white p-10 rounded-2xl shadow-2xl w-full max-w-md space-y-6">
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 dark:from-slate-950 to-indigo-900 dark:to-indigo-950 p-4">
+      <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-800 p-10 rounded-2xl shadow-2xl w-full max-w-md space-y-6">
         
         <div className="text-center space-y-2 mb-8">
-          <h2 className="text-3xl font-extrabold text-gray-900">Welcome Back</h2>
-          <p className="text-sm text-gray-500">Sign in to the SME Regulatory Compliance Navigator</p>
+          <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white">Welcome Back</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Sign in to the SME Regulatory Compliance Navigator</p>
         </div>
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-            <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-gray-300 p-3 rounded-lg outline-none bg-gray-50" />
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Address</label>
+            <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-gray-300 dark:border-gray-600 p-3 rounded-lg outline-none bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white" />
           </div>
 
           <div className="relative">
             <div className="flex justify-between mb-1">
-              <label className="block text-sm font-medium text-gray-700">Password</label>
-              <Link to="/forgot-password" title="reset" className="text-xs font-semibold text-indigo-600 hover:underline">Forgot Password?</Link>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
+              <Link to="/forgot-password" title="reset" className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">Forgot Password?</Link>
             </div>
-            <input required type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} className="w-full border border-gray-300 p-3 rounded-lg outline-none bg-gray-50 pr-10" />
-            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-9 text-gray-400">
+            <input required type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} className="w-full border border-gray-300 dark:border-gray-600 p-3 rounded-lg outline-none bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white pr-10" />
+            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-9 text-gray-400 dark:text-gray-500">
               {showPassword ? <EyeSlashIcon className="h-5 w-5"/> : <EyeIcon className="h-5 w-5"/>}
             </button>
           </div>
         </div>
 
-        {error && <div className="bg-red-50 text-red-700 p-3 rounded-lg text-center text-sm font-medium">{error}</div>}
+        {error && <div className="bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 p-3 rounded-lg text-center text-sm font-medium">{error}</div>}
 
         <button type="submit" disabled={loading} className="w-full p-3 rounded-lg text-white font-semibold bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300">
           {loading ? "Signing In..." : "Sign In"}
         </button>
 
         <div className="flex items-center my-4">
-          <div className="flex-grow border-t border-gray-200"></div>
-          <span className="mx-4 text-xs text-gray-400 font-medium uppercase tracking-wider">Or continue with</span>
-          <div className="flex-grow border-t border-gray-200"></div>
+          <div className="flex-grow border-t border-gray-200 dark:border-gray-700"></div>
+          <span className="mx-4 text-xs text-gray-400 dark:text-gray-500 font-medium uppercase tracking-wider">Or continue with</span>
+          <div className="flex-grow border-t border-gray-200 dark:border-gray-700"></div>
         </div>
 
         <div className="flex justify-center">
@@ -120,8 +120,8 @@ export default function SignIn() {
           />
         </div>
 
-        <p className="text-center text-sm text-gray-600 mt-6 pt-4 border-t">
-          Don't have an account? <Link to="/register" className="text-indigo-600 font-semibold hover:underline">Register here</Link>
+        <p className="text-center text-sm text-gray-600 dark:text-gray-400 mt-6 pt-4 border-t dark:border-gray-700">
+          Don't have an account? <Link to="/register" className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">Register here</Link>
         </p>
       </form>
     </div>

@@ -85,7 +85,7 @@ export default function Dashboard() {
   }, [navigate]);
 
   return (
-    <div className="flex bg-slate-50 min-h-screen font-sans">
+    <div className="flex bg-slate-50 dark:bg-slate-900 min-h-screen font-sans">
       <Sidebar />
 
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
@@ -96,23 +96,23 @@ export default function Dashboard() {
             
             <div className="flex justify-between items-end">
               <div>
-                <h1 className="text-3xl font-black text-slate-900 tracking-tight">
-                  Welcome back, <span className="text-indigo-600">{userName || "User"}</span>
+                <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+                  Welcome back, <span className="text-indigo-600 dark:text-indigo-400">{userName || "User"}</span>
                 </h1>
-                <p className="text-sm font-medium text-slate-500 mt-1">
+                <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">
                   Here is your real-time compliance status.
                 </p>
               </div>
               <button 
                 onClick={fetchDashboardData}
-                className="p-2 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-indigo-600 transition-all shadow-sm"
+                className="p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all shadow-sm"
               >
                 <ArrowPathIcon className={`h-5 w-5 ${loading ? "animate-spin" : ""}`} />
               </button>
             </div>
 
             {error && (
-              <div className="bg-rose-50 border border-rose-200 text-rose-700 p-4 rounded-2xl text-sm font-bold flex items-center">
+              <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 p-4 rounded-2xl text-sm font-bold flex items-center">
                 <ExclamationTriangleIcon className="h-5 w-5 mr-3" />
                 {error}
               </div>
@@ -165,10 +165,10 @@ export default function Dashboard() {
             </div>
 
             {/* 3. Upcoming Expiries List */}
-            <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
-              <div className="px-8 py-6 border-b border-slate-50 flex justify-between items-center bg-slate-50/30">
-                <h3 className="font-black text-slate-800 text-lg uppercase tracking-tight">Priority Renewals (90 Days)</h3>
-                <span className="text-[10px] font-black bg-white border border-slate-200 text-slate-400 px-3 py-1 rounded-full uppercase tracking-widest">
+            <div className="dark:bg-slate-800 bg-white rounded-3xl shadow-lg dark:shadow-slate-800 shadow-slate-200/50 border dark:border-slate-700/50 border-slate-100 overflow-hidden">
+              <div className="px-8 py-6 border-b dark:border-b-slate-700 border-slate-50 flex justify-between items-center bg-slate-10/30">
+                <h3 className="font-black dark:text-slate-500 text-slate-800 text-lg uppercase tracking-tight">Priority Renewals (90 Days)</h3>
+                <span className="text-[10px] font-black dark:bg-slate-600 dark:text-slate-50 dark:border-slate-600 bg-white border border-slate-200 text-slate-400 px-3 py-1 rounded-full uppercase tracking-widest">
                   Action Required
                 </span>
               </div>
@@ -177,7 +177,7 @@ export default function Dashboard() {
                 <div className="space-y-4">
                   {loading ? (
                     [1, 2].map((i) => (
-                      <div key={i} className="h-20 bg-slate-50 animate-pulse rounded-2xl"></div>
+                      <div key={i} className="h-20 bg-slate-50 dark:bg-slate-600 animate-pulse rounded-2xl"></div>
                     ))
                   ) : summary.upcoming_expiries?.length > 0 ? (
                     summary.upcoming_expiries.map((permit) => (
@@ -227,7 +227,7 @@ export default function Dashboard() {
 
                 <button
                   onClick={() => navigate("/permits")}
-                  className="w-full mt-8 flex items-center justify-center py-4 text-xs font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 rounded-2xl hover:bg-indigo-600 hover:text-white transition-all duration-300"
+                  className="w-full mt-8 flex items-center justify-center py-4 text-xs font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 rounded-2xl hover:bg-indigo-600 hover:text-white transition-all duration-300 dark:bg-slate-600 dark:text-white"
                 >
                   Manage All Permits
                   <ArrowRightIcon className="h-4 w-4 ml-2" />

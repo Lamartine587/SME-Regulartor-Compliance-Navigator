@@ -50,13 +50,13 @@ export default function AdminErrors() {
 
   // Helper to colorize status codes
   const getStatusColor = (code) => {
-    if (code >= 500) return "bg-rose-100 text-rose-700 border-rose-200"; // Server crashes
-    if (code >= 400) return "bg-amber-100 text-amber-700 border-amber-200"; // User/Auth errors
-    return "bg-slate-100 text-slate-700";
+    if (code >= 500) return "bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-700/30"; // Server crashes
+    if (code >= 400) return "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-700/30"; // User/Auth errors
+    return "bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-600";
   };
 
   return (
-    <div className="flex bg-slate-50 min-h-screen font-sans">
+    <div className="flex bg-slate-50 dark:bg-slate-900 min-h-screen font-sans">
       <Sidebar />
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
         <Navbar />
@@ -65,27 +65,27 @@ export default function AdminErrors() {
             
             <div className="flex justify-between items-center">
               <div>
-                <h1 className="text-2xl font-black text-slate-900 flex items-center">
-                  <BugAntIcon className="h-7 w-7 mr-2 text-indigo-600" />
+                <h1 className="text-2xl font-black text-slate-900 dark:text-white flex items-center">
+                  <BugAntIcon className="h-7 w-7 mr-2 text-indigo-600 dark:text-indigo-400" />
                   API Error Monitor
                 </h1>
-                <p className="text-sm font-medium text-slate-500 mt-1">System-wide exception tracking.</p>
+                <p className="text-sm font-medium text-slate-500 dark:text-gray-400 mt-1">System-wide exception tracking.</p>
               </div>
               <div className="flex space-x-3">
-                <button onClick={fetchLogs} className="p-2 text-slate-500 bg-white border border-slate-200 rounded-lg hover:bg-slate-50">
+                <button onClick={fetchLogs} className="p-2 text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
                   <ArrowPathIcon className={`h-5 w-5 ${loading ? "animate-spin" : ""}`} />
                 </button>
-                <button onClick={clearLogs} className="flex items-center px-4 py-2 bg-rose-50 text-rose-600 text-sm font-bold rounded-xl border border-rose-100 hover:bg-rose-100 transition-all">
+                <button onClick={clearLogs} className="flex items-center px-4 py-2 bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 text-sm font-bold rounded-xl border border-rose-100 dark:border-rose-700/30 hover:bg-rose-100 dark:hover:bg-rose-900/30 transition-all">
                   <TrashIcon className="h-4 w-4 mr-2" />
                   Clear Logs
                 </button>
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="min-w-full text-left text-sm">
-                  <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 font-black uppercase tracking-widest text-[10px]">
+                  <thead className="bg-slate-50 dark:bg-slate-700 border-b border-slate-100 dark:border-slate-600 text-slate-500 dark:text-slate-400 font-black uppercase tracking-widest text-[10px]">
                     <tr>
                       <th className="px-6 py-4">Timestamp</th>
                       <th className="px-6 py-4">Status</th>
@@ -93,13 +93,13 @@ export default function AdminErrors() {
                       <th className="px-6 py-4">Error Detail</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-50">
+                  <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
                     {loading ? (
-                       <tr><td colSpan="4" className="p-8 text-center text-slate-400">Loading logs...</td></tr>
+                       <tr><td colSpan="4" className="p-8 text-center text-slate-400 dark:text-slate-600">Loading logs...</td></tr>
                     ) : logs.length > 0 ? (
                       logs.map((log) => (
-                        <tr key={log._id} className="hover:bg-slate-50 transition-colors">
-                          <td className="px-6 py-4 text-xs font-mono text-slate-500">
+                        <tr key={log._id} className="hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                          <td className="px-6 py-4 text-xs font-mono text-slate-500 dark:text-gray-400">
                             {new Date(log.timestamp).toLocaleString()}
                           </td>
                           <td className="px-6 py-4">
@@ -109,12 +109,12 @@ export default function AdminErrors() {
                           </td>
                           <td className="px-6 py-4">
                             <div className="flex items-center space-x-2">
-                              <span className="font-black text-xs text-indigo-600">{log.method}</span>
-                              <span className="font-mono text-xs text-slate-700">{log.endpoint}</span>
+                              <span className="font-black text-xs text-indigo-600 dark:text-indigo-400">{log.method}</span>
+                              <span className="font-mono text-xs text-slate-700 dark:text-gray-300">{log.endpoint}</span>
                             </div>
                           </td>
                           <td className="px-6 py-4 max-w-md">
-                            <p className="text-sm font-bold text-slate-800 truncate">{log.error_detail}</p>
+                            <p className="text-sm font-bold text-slate-800 dark:text-gray-300 truncate">{log.error_detail}</p>
                             {/* If it's a 500 error, you could expand this to show the traceback! */}
                           </td>
                         </tr>
@@ -122,9 +122,9 @@ export default function AdminErrors() {
                     ) : (
                       <tr>
                         <td colSpan="4" className="px-6 py-16 text-center">
-                          <ExclamationCircleIcon className="mx-auto h-12 w-12 text-slate-200 mb-3" />
-                          <p className="text-slate-900 font-bold">No errors logged</p>
-                          <p className="text-slate-500 text-sm">Your APIs are running smoothly!</p>
+                          <ExclamationCircleIcon className="mx-auto h-12 w-12 text-slate-200 dark:text-slate-700 mb-3" />
+                          <p className="text-slate-900 dark:text-white font-bold">No errors logged</p>
+                          <p className="text-slate-500 dark:text-gray-400 text-sm">Your APIs are running smoothly!</p>
                         </td>
                       </tr>
                     )}
