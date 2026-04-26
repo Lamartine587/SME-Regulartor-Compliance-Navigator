@@ -88,6 +88,7 @@ export const resetPassword = async (email, otp_code, new_password) => {
   return await res.json();
 };
 
+// --- REQUEST PHONE OTP ---
 export const requestPhoneOTP = async () => {
   const token = localStorage.getItem("access_token");
   const res = await fetch(`${BASE_URL}/api/auth/request-otp`, {
@@ -100,5 +101,27 @@ export const requestPhoneOTP = async () => {
   
   const data = await res.json();
   if (!res.ok) throw new Error(data.detail || "Could not request OTP.");
+  return data;
+};
+
+// --- CHANGE PASSWORD (LOGGED IN USER) ---
+export const changePassword = async (current_password, new_password) => {
+  const token = localStorage.getItem("access_token");
+  const res = await fetch(`${BASE_URL}/api/auth/change-password`, {
+    method: "POST",
+    headers: { 
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    },
+    // The keys here must match what your FastAPI Pydantic schema expects!
+    body: JSON.stringify({ current_password, new_password }),
+  });
+  
+  const data = await res.json();
+  if (!res.ok) {
+    console.error("🚨 FASTAPI CHANGE PASSWORD ERROR:", data.detail); 
+    const errorMessage = Array.isArray(data.detail) ? data.detail[0]?.msg : data.detail;
+    throw new Error(errorMessage || "Failed to change password.");
+  }
   return data;
 };

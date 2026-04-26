@@ -9,7 +9,7 @@ from google.auth.transport import requests as google_requests
 
 from schemas.auth_schema import (
     UserCreate, UserLogin, OTPVerify, Token, 
-    ForgotPassword, ResetPassword
+    ForgotPassword, ResetPassword, ChangePasswordRequest
 )
 from services import auth_service
 from services.sms_service import send_sms_otp
@@ -258,3 +258,19 @@ async def request_otp(
         return {"message": f"OTP sent successfully to {current_user.phone}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail="Failed to send SMS. Please try again later.")
+
+
+@router.post("/change-password")
+async def change_password(
+    payload: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user),
+    neon_db: Session = Depends(get_neon_db)
+):
+    # 1. Verify the current password they typed matches what is stored in the database
+    if not current_user.hashed_password or not verify_password(payload.current_password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Incorrect current password.")
+
+    # 2. Update the password (this hashes the new password and saves it to NeonDB)
+    auth_service.update_password(neon_db, current_user.id, payload.new_password)
+    
+    return {"message": "Password updated successfully."}

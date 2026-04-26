@@ -13,6 +13,17 @@ import {
   DocumentArrowUpIcon
 } from "@heroicons/react/24/outline";
 
+// A list of common document types for the dropdown
+const DOCUMENT_TYPES = [
+  { value: "KRA_COMPLIANCE_CERTIFICATE", label: "KRA Tax Compliance" },
+  { value: "SINGLE_BUSINESS_PERMIT", label: "Single Business Permit" },
+  { value: "FIRE_SAFETY_CERTIFICATE", label: "Fire Safety Certificate" },
+  { value: "HEALTH_AND_HYGIENE", label: "Health & Hygiene Permit" },
+  { value: "NSSF_COMPLIANCE", label: "NSSF Compliance" },
+  { value: "NHIF_COMPLIANCE", label: "NHIF Compliance" },
+  { value: "OTHER", label: "Other Document" }
+];
+
 export default function Permits() {
   const navigate = useNavigate();
   const [permits, setPermits] = useState([]);
@@ -24,6 +35,10 @@ export default function Permits() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
+  
+  // --- NEW: Missing states required by FastAPI ---
+  const [documentTitle, setDocumentTitle] = useState("");
+  const [documentType, setDocumentType] = useState(DOCUMENT_TYPES[0].value);
 
   const token = localStorage.getItem("access_token");
 
@@ -106,29 +121,37 @@ export default function Permits() {
     if (!selectedFile) {
       return setUploadError("Please select a file to upload.");
     }
+    if (!documentTitle.trim()) {
+      return setUploadError("Please provide a document title.");
+    }
 
     setIsUploading(true);
     setUploadError("");
 
-    // We must use FormData to send files to a FastAPI backend
+    // --- NEW: Add title and document_type to FormData ---
     const formData = new FormData();
     formData.append("file", selectedFile);
+    formData.append("title", documentTitle);
+    formData.append("document_type", documentType);
 
     try {
       const res = await fetch("http://localhost:8000/api/vault/documents", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`
-          // Note: DO NOT set 'Content-Type' manually when sending FormData
-          // The browser automatically sets it to 'multipart/form-data' with the correct boundary
         },
         body: formData,
       });
 
-      if (!res.ok) throw new Error("Failed to upload document. Please try again.");
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.detail || "Failed to upload document. Please try again.");
+      }
 
       // Reset modal and refresh the table
       setSelectedFile(null);
+      setDocumentTitle("");
+      setDocumentType(DOCUMENT_TYPES[0].value);
       setIsUploadModalOpen(false);
       fetchPermits();
 
@@ -165,7 +188,6 @@ export default function Permits() {
                   <ArrowPathIcon className={`h-5 w-5 ${loading ? "animate-spin" : ""}`} />
                 </button>
                 <button 
-                  // Opens the pop-up modal instead of navigating
                   onClick={() => setIsUploadModalOpen(true)}
                   className="flex items-center px-5 py-2.5 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-lg dark:shadow-indigo-900 shadow-indigo-200"
                 >
@@ -264,6 +286,7 @@ export default function Permits() {
                 onClick={() => {
                   setIsUploadModalOpen(false);
                   setSelectedFile(null);
+                  setDocumentTitle("");
                   setUploadError("");
                 }}
                 className="p-1 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 bg-white dark:bg-slate-700 rounded-lg transition-colors"
@@ -272,10 +295,41 @@ export default function Permits() {
               </button>
             </div>
 
-            <form onSubmit={handleUploadSubmit} className="p-6 space-y-6">
+            <form onSubmit={handleUploadSubmit} className="p-6 space-y-5">
               
-              <div className="border-2 border-dashed border-slate-200 dark:border-slate-600 rounded-2xl p-8 text-center bg-slate-50 dark:bg-slate-700/50 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:border-indigo-200 dark:hover:border-indigo-700 transition-colors cursor-pointer relative">
-                <DocumentArrowUpIcon className="mx-auto h-10 w-10 text-indigo-400 mb-3" />
+              {/* --- NEW: Document Title Input --- */}
+              <div>
+                <label className="block text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-1.5">
+                  Document Title
+                </label>
+                <input 
+                  type="text" 
+                  value={documentTitle}
+                  onChange={(e) => setDocumentTitle(e.target.value)}
+                  placeholder="e.g., 2026 Fire Safety Permit"
+                  className="w-full border border-slate-200 dark:border-slate-600 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 dark:bg-slate-700/50 text-sm font-medium dark:text-white" 
+                />
+              </div>
+
+              {/* --- NEW: Document Type Select --- */}
+              <div>
+                <label className="block text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-1.5">
+                  Category
+                </label>
+                <select 
+                  value={documentType}
+                  onChange={(e) => setDocumentType(e.target.value)}
+                  className="w-full border border-slate-200 dark:border-slate-600 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 dark:bg-slate-700/50 text-sm font-medium dark:text-white cursor-pointer"
+                >
+                  {DOCUMENT_TYPES.map(type => (
+                    <option key={type.value} value={type.value}>{type.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* File Uploader */}
+              <div className="border-2 border-dashed border-slate-200 dark:border-slate-600 rounded-2xl p-6 text-center bg-slate-50 dark:bg-slate-700/50 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:border-indigo-200 dark:hover:border-indigo-700 transition-colors cursor-pointer relative mt-2">
+                <DocumentArrowUpIcon className="mx-auto h-8 w-8 text-indigo-400 mb-2" />
                 <label className="cursor-pointer">
                   <span className="text-indigo-600 dark:text-indigo-400 font-black hover:underline text-sm">Browse files</span>
                   <span className="text-slate-500 dark:text-gray-400 text-sm font-medium"> to upload</span>
@@ -286,7 +340,7 @@ export default function Permits() {
                     onChange={handleFileChange} 
                   />
                 </label>
-                <p className="text-xs text-slate-400 dark:text-gray-400 mt-2 font-medium">Supports PDF, PNG, JPG</p>
+                <p className="text-xs text-slate-400 dark:text-gray-400 mt-1 font-medium">Supports PDF, PNG, JPG</p>
               </div>
 
               {selectedFile && (
@@ -308,9 +362,9 @@ export default function Permits() {
 
               <button 
                 type="submit" 
-                disabled={!selectedFile || isUploading}
+                disabled={!selectedFile || !documentTitle.trim() || isUploading}
                 className={`w-full py-3.5 rounded-xl text-white text-xs font-black uppercase tracking-widest transition-all ${
-                  isUploading || !selectedFile 
+                  isUploading || !selectedFile || !documentTitle.trim()
                     ? "bg-indigo-300 dark:bg-indigo-800 cursor-not-allowed" 
                     : "bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-700 shadow-lg shadow-indigo-200 dark:shadow-indigo-900/50"
                 }`}

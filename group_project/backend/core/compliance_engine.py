@@ -10,6 +10,7 @@ from devsms import DevSMSClient
 from google import genai 
 from core.config import settings
 from models.document_model import ComplianceDocument
+from models.user_model import User # Added this to fetch user contact info
 
 mongo_client = AsyncIOMotorClient(settings.MONGODB_URL)
 mongo_db = mongo_client["SMERegulator"]
@@ -129,3 +130,36 @@ class ComplianceEngine:
             print(f"⚠️ Notification error: {e}")
 
         print(f"🚀 Gemini successfully synchronized Document #{doc_id}")
+
+    # --- NEW BATCH PROCESSING ENGINE ---
+    @staticmethod
+    async def process_all_unprocessed(db: Session):
+        """
+        Scans the database for any documents that bypassed the AI scan 
+        (identified by having no expiry date) and processes them.
+        """
+        # Find all documents missing an expiry date
+        unprocessed_docs = db.query(ComplianceDocument).filter(ComplianceDocument.expiry_date == None).all()
+        
+        if not unprocessed_docs:
+            print("✅ All uploaded documents are fully processed and up to date.")
+            return
+
+        print(f"🔍 Found {len(unprocessed_docs)} unprocessed documents. Starting batch AI scan...")
+
+        for doc in unprocessed_docs:
+            # Look up the user to grab their email and phone for the notifications
+            user = db.query(User).filter(User.id == doc.user_id).first()
+            
+            if user:
+                print(f"⏳ Processing Document #{doc.id} for {user.email}...")
+                await ComplianceEngine.process_new_upload(
+                    doc_id=doc.id, 
+                    db=db, 
+                    user_email=user.email, 
+                    phone=user.phone
+                )
+            else:
+                print(f"⚠️ Skipping Document #{doc.id}: Associated user not found.")
+                
+        print("🎉 Batch processing complete.")

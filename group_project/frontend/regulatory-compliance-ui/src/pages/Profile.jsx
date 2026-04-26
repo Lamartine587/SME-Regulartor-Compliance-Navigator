@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { verifyOTP, requestPhoneOTP } from "../services/authService";
+import { verifyOTP, requestPhoneOTP, changePassword } from "../services/authService";
 import { getProfile, updateProfile } from "../services/profileService";
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
+import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline"; // --- NEW: Added Icons ---
 
 const KENYAN_COUNTIES = [
   "Baringo", "Bomet", "Bungoma", "Busia", "Elgeyo-Marakwet", "Embu", "Garissa", 
@@ -59,6 +60,19 @@ export default function Profile() {
   const [saveMessage, setSaveMessage] = useState({ type: "", text: "" });
   const [isLoading, setIsLoading] = useState(true);
 
+  // --- NEW: Password State & Visibility Toggles ---
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: ""
+  });
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState({ type: "", text: "" });
+  
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -90,6 +104,34 @@ export default function Profile() {
 
   const handleChange = (e) => {
     setProfileData({ ...profileData, [e.target.name]: e.target.value });
+  };
+
+  // --- Password Handlers ---
+  const handlePasswordChange = (e) => {
+    setPasswordData({ ...passwordData, [e.target.name]: e.target.value });
+  };
+
+  const handlePasswordSubmit = async (e) => {
+    e.preventDefault();
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      return setPasswordMessage({ type: "error", text: "New passwords do not match." });
+    }
+    if (passwordData.newPassword.length < 8) {
+      return setPasswordMessage({ type: "error", text: "Password must be at least 8 characters." });
+    }
+
+    setIsChangingPassword(true); 
+    setPasswordMessage({ type: "", text: "" });
+    try {
+      await changePassword(passwordData.currentPassword, passwordData.newPassword);
+      setPasswordMessage({ type: "success", text: "Password updated successfully!" });
+      setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" }); // clear form
+      setTimeout(() => setPasswordMessage({ type: "", text: "" }), 3000);
+    } catch (error) {
+      setPasswordMessage({ type: "error", text: error.response?.data?.detail || "Failed to update password." });
+    } finally {
+      setIsChangingPassword(false);
+    }
   };
 
   const handleRequestNewOTP = async () => {
@@ -158,6 +200,7 @@ export default function Profile() {
               </div>
             </div>
 
+            {/* MAIN PROFILE FORM */}
             <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
               <form onSubmit={handleProfileUpdate} className="p-8 space-y-8">
                 
@@ -210,7 +253,6 @@ export default function Profile() {
                       </div>
                     </div>
 
-                    {/* Updated Job Title Dropdown */}
                     <div>
                       <label className="block text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-1">Job Title</label>
                       <select 
@@ -261,6 +303,97 @@ export default function Profile() {
                   </div>
                   <button type="submit" disabled={isSaving} className={`px-10 py-3 rounded-xl text-white text-[10px] font-black uppercase tracking-widest shadow-lg transition-all ${isSaving ? 'bg-indigo-300' : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-100'}`}>
                     {isSaving ? "Syncing..." : "Update Profile"}
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            {/* --- SECURITY & PASSWORD CHANGE SECTION --- */}
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+              <form onSubmit={handlePasswordSubmit} className="p-8 space-y-8">
+                <div>
+                  <h4 className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-6 border-l-4 border-indigo-600 pl-3">Security & Password</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    
+                    {/* Current Password Field */}
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-1">Current Password</label>
+                      <div className="relative">
+                        <input 
+                          type={showCurrentPassword ? "text" : "password"}
+                          name="currentPassword" 
+                          value={passwordData.currentPassword} 
+                          onChange={handlePasswordChange} 
+                          placeholder="••••••••"
+                          className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium pr-10" 
+                          required 
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                        >
+                          {showCurrentPassword ? <EyeSlashIcon className="h-5 w-5"/> : <EyeIcon className="h-5 w-5"/>}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* New Password Field */}
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-1">New Password</label>
+                      <div className="relative">
+                        <input 
+                          type={showNewPassword ? "text" : "password"}
+                          name="newPassword" 
+                          value={passwordData.newPassword} 
+                          onChange={handlePasswordChange} 
+                          placeholder="••••••••"
+                          className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium pr-10" 
+                          required 
+                          minLength="8"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                        >
+                          {showNewPassword ? <EyeSlashIcon className="h-5 w-5"/> : <EyeIcon className="h-5 w-5"/>}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Confirm Password Field */}
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-1">Confirm New Password</label>
+                      <div className="relative">
+                        <input 
+                          type={showConfirmPassword ? "text" : "password"}
+                          name="confirmPassword" 
+                          value={passwordData.confirmPassword} 
+                          onChange={handlePasswordChange} 
+                          placeholder="••••••••"
+                          className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium pr-10" 
+                          required 
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                        >
+                          {showConfirmPassword ? <EyeSlashIcon className="h-5 w-5"/> : <EyeIcon className="h-5 w-5"/>}
+                        </button>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-6 border-t border-slate-100 dark:border-slate-700">
+                  <div className="h-5">
+                    {passwordMessage.text && <span className={`text-[10px] font-black uppercase ${passwordMessage.type === 'error' ? 'text-rose-600' : 'text-emerald-600'}`}>{passwordMessage.text}</span>}
+                  </div>
+                  <button type="submit" disabled={isChangingPassword} className={`px-10 py-3 rounded-xl text-white text-[10px] font-black uppercase tracking-widest shadow-lg transition-all ${isChangingPassword ? 'bg-slate-300' : 'bg-slate-900 hover:bg-slate-800 shadow-slate-200'}`}>
+                    {isChangingPassword ? "Updating..." : "Change Password"}
                   </button>
                 </div>
               </form>

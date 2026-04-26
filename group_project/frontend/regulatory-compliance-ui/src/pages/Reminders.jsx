@@ -175,17 +175,6 @@ export default function Reminders() {
               )}
             </div>
 
-            {/* Proactive Tip Card */}
-            <div className="bg-indigo-900 dark:bg-indigo-950 rounded-3xl p-8 text-white relative overflow-hidden shadow-2xl shadow-indigo-200 dark:shadow-indigo-900/50">
-               <div className="relative z-10">
-                  <h4 className="text-lg font-bold mb-2">Pro-Tip: USSD Reminders</h4>
-                  <p className="text-indigo-100 dark:text-indigo-200 text-sm opacity-90 max-w-lg">
-                    Don't forget you can access your compliance status on the go! Dial our USSD code to check expiring permits even without an internet connection.
-                  </p>
-               </div>
-               <div className="absolute top-0 right-0 -mr-8 -mt-8 h-40 w-40 bg-indigo-500 rounded-full opacity-20 blur-2xl"></div>
-            </div>
-
           </div>
         </main>
       </div>
