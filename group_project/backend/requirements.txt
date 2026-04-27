@@ -46,3 +46,7 @@ google-generativeai
 bafredo-devsms
 google-auth
 google-genai
+
+pytesseract 
+pdf2image 
+Pillow

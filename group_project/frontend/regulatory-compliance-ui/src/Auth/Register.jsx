@@ -20,13 +20,31 @@ export default function Register() {
   const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const validatePhone = (phone) => /^\+254\d{9}$/.test(phone);
 
+  // Auto-formats Kenyan numbers instantly
   const handlePhoneChange = (e) => {
     let val = e.target.value;
-    if (val && !val.startsWith("+")) val = "+" + val;
-    const cleanVal = val.charAt(0) + val.slice(1).replace(/\D/g, "");
-    if (cleanVal.length <= 13) {
-      setPhone(cleanVal);
+    
+    // Extract only the numbers
+    let digits = val.replace(/\D/g, "");
+
+    if (!digits) {
+      setPhone("");
+      return;
     }
+
+    // Auto-detect standard Kenyan formats and append 254
+    if (digits.startsWith("0")) {
+      digits = "254" + digits.slice(1);
+    } else if (digits.startsWith("7") || digits.startsWith("1")) {
+      digits = "254" + digits;
+    }
+
+    // Limit to exactly 12 digits (254 + 9 digits)
+    if (digits.length > 12) {
+      digits = digits.slice(0, 12);
+    }
+
+    setPhone("+" + digits);
   };
 
   const passwordRules = {
@@ -48,7 +66,7 @@ export default function Register() {
     setError("");
 
     if (!validateEmail(email)) return setError("Please enter a valid email address.");
-    if (!validatePhone(phone)) return setError("Phone must be exactly +254 and 9 digits (e.g., +254711222333).");
+    if (!validatePhone(phone)) return setError("Phone must be exactly 9 digits after the 254 country code.");
     if (!passwordValid) return setError("Password must include: " + failedRules.join(", "));
     if (password !== confirmPassword) return setError("Passwords do not match.");
 
@@ -80,17 +98,17 @@ export default function Register() {
 
           <div>
             <label className="block text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-1">
-              Phone Number <span className="text-indigo-600 dark:text-indigo-400 lowercase font-bold">(+254 format)</span>
+              Phone Number
             </label>
             <input 
               required 
               type="tel" 
-              placeholder="+2547XXXXXXXX" 
+              placeholder="07XX XXX XXX" 
               value={phone} 
               onChange={handlePhoneChange} 
               className="w-full border border-slate-200 dark:border-slate-600 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-sm font-mono font-bold tracking-wider" 
             />
-            <p className="text-[9px] text-slate-400 dark:text-slate-500 mt-1 italic font-medium text-center">Required for SMS: +254 followed by 9 digits.</p>
+            <p className="text-[9px] text-slate-400 dark:text-slate-500 mt-1 italic font-medium text-center">Required for SMS alerts. Auto-formats to +254.</p>
           </div>
 
           <div className="relative">
@@ -124,7 +142,7 @@ export default function Register() {
         </button>
 
         <p className="text-center text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-          Already have an account? <button type="button" onClick={() => navigate('/login')} className="text-indigo-600 dark:text-indigo-400 font-black hover:underline">Sign In</button>
+          Already have an account? <button type="button" onClick={() => navigate('/Auth/SignIn')} className="text-indigo-600 dark:text-indigo-400 font-black hover:underline">Sign In</button>
         </p>
 
       </form>

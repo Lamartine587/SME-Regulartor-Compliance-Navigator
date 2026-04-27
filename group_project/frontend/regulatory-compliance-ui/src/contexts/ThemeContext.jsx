@@ -14,13 +14,11 @@ export const ThemeProvider = ({ children }) => {
   const [theme, setTheme] = useState('light');
 
   useEffect(() => {
-    // Load theme from localStorage
-    const initTheme = ()=>{
+    const initTheme = () => {
         const savedTheme = localStorage.getItem('theme');
         if (savedTheme) {
             setTheme(savedTheme);
         } else {
-            // Default to system preference
             const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
             setTheme(prefersDark ? 'dark' : 'light');
         }
@@ -29,13 +27,11 @@ export const ThemeProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    // Apply theme to document
     if (theme === 'dark') {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
-    // Save to localStorage
     localStorage.setItem('theme', theme);
   }, [theme]);
 
