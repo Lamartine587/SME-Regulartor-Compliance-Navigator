@@ -3,7 +3,7 @@ import { verifyOTP, requestPhoneOTP, changePassword } from "../services/authServ
 import { getProfile, updateProfile } from "../services/profileService";
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
-import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline"; // --- NEW: Added Icons ---
+import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 
 const KENYAN_COUNTIES = [
   "Baringo", "Bomet", "Bungoma", "Busia", "Elgeyo-Marakwet", "Embu", "Garissa", 
@@ -31,7 +31,6 @@ const BUSINESS_TYPES = [
   "Other / Diversified SME"
 ];
 
-// Added Job Titles for SME context
 const JOB_TITLES = [
   "Owner / Director",
   "Manager / Supervisor",
@@ -39,6 +38,20 @@ const JOB_TITLES = [
   "Office Assistant / Admin",
   "IT / Tech Support Person",
   "Sales / Marketing Person",
+  "Other"
+];
+
+// --- NEW: Added Professions Dropdown for Personal Profile ---
+const PROFESSIONS = [
+  "Teacher / Educator",
+  "IT Professional / Developer",
+  "Healthcare Worker / Nurse / Doctor",
+  "Driver / Chauffeur / Logistics",
+  "Accountant / Financial Analyst",
+  "Lawyer / Legal Professional",
+  "Engineer / Architect",
+  "Business Owner / Entrepreneur",
+  "Student",
   "Other"
 ];
 
@@ -50,25 +63,39 @@ export default function Profile() {
   const [isRequesting, setIsRequesting] = useState(false);
   const userId = localStorage.getItem("user_id"); 
 
+  // --- UPDATED: Nested State to match new Backend Schema ---
   const [profileData, setProfileData] = useState({
     email: "", 
-    first_name: "", last_name: "", phone: "", is_phone_verified: false,
-    role_title: "", business_name: "", registration_number: "", industry: "", county_location: ""
+    phone: "", 
+    is_phone_verified: false,
+    role: "",
+    personal: {
+      first_name: "", 
+      last_name: "",
+      national_id: "",
+      personal_kra_pin: "",
+      date_of_birth: "",
+      profession: ""
+    },
+    business: {
+      business_name: "", 
+      registration_number: "", 
+      industry: "", 
+      county_location: "",
+      role_title: ""
+    }
   });
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState({ type: "", text: "" });
   const [isLoading, setIsLoading] = useState(true);
 
-  // --- NEW: Password State & Visibility Toggles ---
+  // Password State
   const [passwordData, setPasswordData] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: ""
+    currentPassword: "", newPassword: "", confirmPassword: ""
   });
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [passwordMessage, setPasswordMessage] = useState({ type: "", text: "" });
-  
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -77,7 +104,18 @@ export default function Profile() {
     const fetchProfile = async () => {
       try {
         const data = await getProfile();
-        setProfileData({ ...data });
+        // Fallback null values to empty strings to prevent React controlled input warnings
+        const cleanData = {
+          ...data,
+          personal: data.personal || { first_name: "", last_name: "", national_id: "", personal_kra_pin: "", date_of_birth: "", profession: "" },
+          business: data.business || { business_name: "", registration_number: "", industry: "", county_location: "", role_title: "" }
+        };
+        
+        // Handle potential nulls inside the nested objects
+        Object.keys(cleanData.personal).forEach(k => cleanData.personal[k] = cleanData.personal[k] || "");
+        Object.keys(cleanData.business).forEach(k => cleanData.business[k] = cleanData.business[k] || "");
+
+        setProfileData(cleanData);
       } catch (error) {
         console.error("Profile load error:", error);
       } finally {
@@ -87,45 +125,37 @@ export default function Profile() {
     fetchProfile();
   }, []);
 
-  const handleNameChange = (e) => {
-    const { name, value } = e.target;
-    const sanitizedValue = value.replace(/[^a-zA-Z\s]/g, "");
-    setProfileData({ ...profileData, [name]: sanitizedValue });
-  };
-
+  // --- UPDATED: Nested Handlers ---
   const handlePhoneChange = (e) => {
     let val = e.target.value;
     if (val && !val.startsWith("+")) val = "+" + val;
     const cleanVal = val.charAt(0) + val.slice(1).replace(/\D/g, "");
-    if (cleanVal.length <= 13) {
-      setProfileData({ ...profileData, phone: cleanVal });
-    }
+    if (cleanVal.length <= 13) setProfileData({ ...profileData, phone: cleanVal });
   };
 
-  const handleChange = (e) => {
-    setProfileData({ ...profileData, [e.target.name]: e.target.value });
+  const handlePersonalChange = (e) => {
+    const { name, value } = e.target;
+    // Keep name sanitation for name fields
+    const finalValue = (name === "first_name" || name === "last_name") ? value.replace(/[^a-zA-Z\s]/g, "") : value;
+    setProfileData(prev => ({ ...prev, personal: { ...prev.personal, [name]: finalValue } }));
   };
 
-  // --- Password Handlers ---
-  const handlePasswordChange = (e) => {
-    setPasswordData({ ...passwordData, [e.target.name]: e.target.value });
+  const handleBusinessChange = (e) => {
+    setProfileData(prev => ({ ...prev, business: { ...prev.business, [e.target.name]: e.target.value } }));
   };
+
+  const handlePasswordChange = (e) => setPasswordData({ ...passwordData, [e.target.name]: e.target.value });
 
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      return setPasswordMessage({ type: "error", text: "New passwords do not match." });
-    }
-    if (passwordData.newPassword.length < 8) {
-      return setPasswordMessage({ type: "error", text: "Password must be at least 8 characters." });
-    }
+    if (passwordData.newPassword !== passwordData.confirmPassword) return setPasswordMessage({ type: "error", text: "New passwords do not match." });
+    if (passwordData.newPassword.length < 8) return setPasswordMessage({ type: "error", text: "Password must be at least 8 characters." });
 
-    setIsChangingPassword(true); 
-    setPasswordMessage({ type: "", text: "" });
+    setIsChangingPassword(true); setPasswordMessage({ type: "", text: "" });
     try {
       await changePassword(passwordData.currentPassword, passwordData.newPassword);
       setPasswordMessage({ type: "success", text: "Password updated successfully!" });
-      setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" }); // clear form
+      setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
       setTimeout(() => setPasswordMessage({ type: "", text: "" }), 3000);
     } catch (error) {
       setPasswordMessage({ type: "error", text: error.response?.data?.detail || "Failed to update password." });
@@ -165,20 +195,34 @@ export default function Profile() {
 
   const handleProfileUpdate = async (e) => {
     e.preventDefault();
-    if (!profileData.first_name || !profileData.last_name || !profileData.phone || !profileData.role_title) {
-      return setSaveMessage({ type: "error", text: "Please fill all required fields." });
+    if (!profileData.personal.first_name || !profileData.personal.last_name || !profileData.phone) {
+      return setSaveMessage({ type: "error", text: "Please fill all required primary fields." });
     }
 
     setIsSaving(true); setSaveMessage({ type: "", text: "" });
     try {
-      const updated = await updateProfile(profileData);
-      setProfileData(updated);
+      const payload = {
+        phone: profileData.phone,
+        personal: profileData.personal,
+        business: profileData.business
+      };
+      const updated = await updateProfile(payload);
+      
+      // Re-apply null checks on return
+      const cleanData = {
+          ...updated,
+          personal: updated.personal || { first_name: "", last_name: "", national_id: "", personal_kra_pin: "", date_of_birth: "", profession: "" },
+          business: updated.business || { business_name: "", registration_number: "", industry: "", county_location: "", role_title: "" }
+      };
+      Object.keys(cleanData.personal).forEach(k => cleanData.personal[k] = cleanData.personal[k] || "");
+      Object.keys(cleanData.business).forEach(k => cleanData.business[k] = cleanData.business[k] || "");
+
+      setProfileData(cleanData);
       setSaveMessage({ type: "success", text: "Settings Updated!" });
       setTimeout(() => setSaveMessage({ type: "", text: "" }), 3000);
     } catch (error) {
       setSaveMessage({ type: "error", text: "Update Failed." });
-      console.error('error' , error.message);
-      
+      console.error('error', error.message);
     } finally {
       setIsSaving(false);
     }
@@ -196,7 +240,7 @@ export default function Profile() {
             <div className="flex justify-between items-end">
               <div>
                 <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Profile Settings</h1>
-                <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">Manage your professional and business identity.</p>
+                <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">Manage your personal credentials and business identity.</p>
               </div>
             </div>
 
@@ -204,43 +248,24 @@ export default function Profile() {
             <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
               <form onSubmit={handleProfileUpdate} className="p-8 space-y-8">
                 
-                {/* PERSONAL DETAILS SECTION */}
+                {/* --- UPDATED: PERSONAL DETAILS SECTION --- */}
                 <div>
-                  <h4 className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-6 border-l-4 border-indigo-600 pl-3">Personal Details</h4>
+                  <h4 className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-6 border-l-4 border-indigo-600 pl-3">Personal Identity</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     
                     <div className="md:col-span-2">
                       <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Registered Email (Not Editable)</label>
-                      <input 
-                        type="email" 
-                        value={profileData.email} 
-                        readOnly 
-                        className="w-full border border-slate-200 p-3 rounded-xl bg-slate-100 text-slate-500 text-sm font-medium cursor-not-allowed outline-none" 
-                      />
+                      <input type="email" value={profileData.email} readOnly className="w-full border border-slate-200 p-3 rounded-xl bg-slate-100 text-slate-500 text-sm font-medium cursor-not-allowed outline-none" />
                     </div>
 
                     <div>
                       <label className="block text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-1">First Name</label>
-                      <input 
-                        type="text" 
-                        name="first_name" 
-                        placeholder="e.g. John"
-                        value={profileData.first_name} 
-                        onChange={handleNameChange} 
-                        className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium" 
-                      />
+                      <input type="text" name="first_name" placeholder="e.g. John" value={profileData.personal.first_name} onChange={handlePersonalChange} className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium" />
                     </div>
 
                     <div>
                       <label className="block text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-1">Last Name</label>
-                      <input 
-                        type="text" 
-                        name="last_name" 
-                        placeholder="e.g. Doe"
-                        value={profileData.last_name} 
-                        onChange={handleNameChange} 
-                        className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium" 
-                      />
+                      <input type="text" name="last_name" placeholder="e.g. Doe" value={profileData.personal.last_name} onChange={handlePersonalChange} className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium" />
                     </div>
 
                     <div>
@@ -253,43 +278,67 @@ export default function Profile() {
                       </div>
                     </div>
 
+                    {/* NEW FIELDS */}
                     <div>
-                      <label className="block text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-1">Job Title</label>
-                      <select 
-                        name="role_title" 
-                        value={profileData.role_title} 
-                        onChange={handleChange} 
-                        className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium cursor-pointer"
-                      >
+                      <label className="block text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-1">Date of Birth</label>
+                      <input type="date" name="date_of_birth" value={profileData.personal.date_of_birth} onChange={handlePersonalChange} className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium" />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-1">National ID</label>
+                      <input type="text" name="national_id" value={profileData.personal.national_id} onChange={handlePersonalChange} className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium" />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-1">Personal KRA PIN</label>
+                      <input type="text" name="personal_kra_pin" value={profileData.personal.personal_kra_pin} onChange={handlePersonalChange} className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium uppercase" />
+                    </div>
+
+                    {/* NEW DROPDOWN */}
+                    <div className="md:col-span-2">
+                      <label className="block text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-1">Primary Profession</label>
+                      <select name="profession" value={profileData.personal.profession} onChange={handlePersonalChange} className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium cursor-pointer">
+                        <option value="">Select Profession...</option>
+                        {PROFESSIONS.map(p => <option key={p} value={p}>{p}</option>)}
+                      </select>
+                    </div>
+
+                  </div>
+                </div>
+
+                {/* --- UPDATED: BUSINESS INFORMATION SECTION --- */}
+                <div>
+                  <h4 className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-6 border-l-4 border-indigo-600 pl-3">Business Entity Information</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-1">Business Name</label>
+                      <input type="text" name="business_name" value={profileData.business.business_name} onChange={handleBusinessChange} className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-1">Business KRA PIN / Reg No.</label>
+                      <input type="text" name="registration_number" value={profileData.business.registration_number} onChange={handleBusinessChange} className="w-full border border-slate-300 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium uppercase" />
+                    </div>
+                    
+                    {/* EXISTING DROPDOWNS */}
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-1">Your Role in Business</label>
+                      <select name="role_title" value={profileData.business.role_title} onChange={handleBusinessChange} className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium cursor-pointer">
                         <option value="">Select Job Title...</option>
                         {JOB_TITLES.map(title => <option key={title} value={title}>{title}</option>)}
                       </select>
                     </div>
-                  </div>
-                </div>
 
-                {/* BUSINESS INFORMATION SECTION */}
-                <div>
-                  <h4 className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-6 border-l-4 border-indigo-600 pl-3">Business Information</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-1">Business Name</label>
-                      <input type="text" name="business_name" value={profileData.business_name} onChange={handleChange} className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium" />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-1">KRA PIN / Reg No.</label>
-                      <input type="text" name="registration_number" value={profileData.registration_number} onChange={handleChange} className="w-full border border-slate-300 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium" />
-                    </div>
                     <div>
                       <label className="block text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-1">Type of Business (Industry)</label>
-                      <select name="industry" value={profileData.industry} onChange={handleChange} className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium cursor-pointer">
+                      <select name="industry" value={profileData.business.industry} onChange={handleBusinessChange} className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium cursor-pointer">
                         <option value="">Select Category...</option>
                         {BUSINESS_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
                       </select>
                     </div>
-                    <div>
-                      <label className="block text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-1">County of Operation</label>
-                      <select name="county_location" value={profileData.county_location} onChange={handleChange} className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium cursor-pointer">
+                    
+                    <div className="md:col-span-2">
+                      <label className="block text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-1">Primary County of Operation</label>
+                      <select name="county_location" value={profileData.business.county_location} onChange={handleBusinessChange} className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium cursor-pointer">
                         <option value="">Select County...</option>
                         {KENYAN_COUNTIES.map(c => <option key={c} value={c}>{c}</option>)}
                       </select>
@@ -310,81 +359,38 @@ export default function Profile() {
 
             {/* --- SECURITY & PASSWORD CHANGE SECTION --- */}
             <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+              {/* Password content remains exactly the same as your previous version */}
               <form onSubmit={handlePasswordSubmit} className="p-8 space-y-8">
                 <div>
                   <h4 className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-6 border-l-4 border-indigo-600 pl-3">Security & Password</h4>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    
-                    {/* Current Password Field */}
                     <div>
                       <label className="block text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-1">Current Password</label>
                       <div className="relative">
-                        <input 
-                          type={showCurrentPassword ? "text" : "password"}
-                          name="currentPassword" 
-                          value={passwordData.currentPassword} 
-                          onChange={handlePasswordChange} 
-                          placeholder="••••••••"
-                          className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium pr-10" 
-                          required 
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                        >
+                        <input type={showCurrentPassword ? "text" : "password"} name="currentPassword" value={passwordData.currentPassword} onChange={handlePasswordChange} placeholder="••••••••" className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium pr-10" required />
+                        <button type="button" onClick={() => setShowCurrentPassword(!showCurrentPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
                           {showCurrentPassword ? <EyeSlashIcon className="h-5 w-5"/> : <EyeIcon className="h-5 w-5"/>}
                         </button>
                       </div>
                     </div>
-
-                    {/* New Password Field */}
                     <div>
                       <label className="block text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-1">New Password</label>
                       <div className="relative">
-                        <input 
-                          type={showNewPassword ? "text" : "password"}
-                          name="newPassword" 
-                          value={passwordData.newPassword} 
-                          onChange={handlePasswordChange} 
-                          placeholder="••••••••"
-                          className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium pr-10" 
-                          required 
-                          minLength="8"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowNewPassword(!showNewPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                        >
+                        <input type={showNewPassword ? "text" : "password"} name="newPassword" value={passwordData.newPassword} onChange={handlePasswordChange} placeholder="••••••••" className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium pr-10" required minLength="8" />
+                        <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
                           {showNewPassword ? <EyeSlashIcon className="h-5 w-5"/> : <EyeIcon className="h-5 w-5"/>}
                         </button>
                       </div>
                     </div>
-
-                    {/* Confirm Password Field */}
                     <div>
                       <label className="block text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-1">Confirm New Password</label>
                       <div className="relative">
-                        <input 
-                          type={showConfirmPassword ? "text" : "password"}
-                          name="confirmPassword" 
-                          value={passwordData.confirmPassword} 
-                          onChange={handlePasswordChange} 
-                          placeholder="••••••••"
-                          className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium pr-10" 
-                          required 
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                        >
+                        <input type={showConfirmPassword ? "text" : "password"} name="confirmPassword" value={passwordData.confirmPassword} onChange={handlePasswordChange} placeholder="••••••••" className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 text-sm font-medium pr-10" required />
+                        <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
                           {showConfirmPassword ? <EyeSlashIcon className="h-5 w-5"/> : <EyeIcon className="h-5 w-5"/>}
                         </button>
                       </div>
                     </div>
-
                   </div>
                 </div>
 
