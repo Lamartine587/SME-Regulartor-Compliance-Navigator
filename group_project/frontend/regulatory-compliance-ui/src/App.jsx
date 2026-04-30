@@ -10,6 +10,8 @@ import Permits from "./pages/Permits";
 import Reminders from "./pages/Reminders";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings"; 
+import TermsOfUse from "./pages/TermsOfUse";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 
 import Register from "./Auth/Register";
 import VerifyOTP from "./Auth/VerifyOTP";
@@ -33,6 +35,8 @@ function App() {
         <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
         <Route path="/verify-otp" element={<PublicRoute><VerifyOTP/></PublicRoute>} />
         <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />
+        <Route path="/terms-of-use" element={<TermsOfUse />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
        
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard/></ProtectedRoute>} />
         <Route path="/permits" element={<ProtectedRoute><Permits /></ProtectedRoute>} />
