@@ -36,7 +36,7 @@ export default function Permits() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   
-  // --- NEW: Missing states required by FastAPI ---
+  // --- Missing states required by FastAPI ---
   const [documentTitle, setDocumentTitle] = useState("");
   const [documentType, setDocumentType] = useState(DOCUMENT_TYPES[0].value);
 
@@ -62,11 +62,6 @@ export default function Permits() {
     setLoading(true);
     setError(""); 
     try {
-      if (!token) {
-        navigate("/login");
-        return;
-      }
-
       const res = await fetch("http://localhost:8000/api/vault/documents", {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -74,7 +69,13 @@ export default function Permits() {
       if (!res.ok) throw new Error("Could not fetch documents");
 
       const data = await res.json();
-      setPermits(data);
+      
+      // --- STRICT FILTER ---
+      // Only show items explicitly marked as 'business'
+      const businessDocs = data.filter(doc => doc.category === "business");
+      
+      setPermits(businessDocs.sort((a, b) => b.id - a.id));
+      
     } catch (err) {
       setError(err.message);
     } finally {
@@ -128,11 +129,13 @@ export default function Permits() {
     setIsUploading(true);
     setUploadError("");
 
-    // --- NEW: Add title and document_type to FormData ---
     const formData = new FormData();
     formData.append("file", selectedFile);
     formData.append("title", documentTitle);
     formData.append("document_type", documentType);
+    
+    // --- FIXED: Explicitly set the category so it routes correctly in the backend ---
+    formData.append("category", "business");
 
     try {
       const res = await fetch("http://localhost:8000/api/vault/documents", {
@@ -175,8 +178,8 @@ export default function Permits() {
             {/* Header Section */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h1 className="text-2xl font-black text-slate-900 dark:text-white">Regulatory Permits</h1>
-                <p className="text-sm font-medium text-slate-500 dark:text-gray-400 mt-1">Live tracking of your compliance status.</p>
+                <h1 className="text-2xl font-black text-slate-900 dark:text-white">Business Permits</h1>
+                <p className="text-sm font-medium text-slate-500 dark:text-gray-400 mt-1">Live tracking of your enterprise compliance status.</p>
               </div>
               
               <div className="flex space-x-3">
@@ -232,14 +235,17 @@ export default function Permits() {
 
                         return (
                           <tr key={permit.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/50 transition-colors group">
-                            <td className="px-8 py-6 font-bold text-slate-800 dark:text-white">{permit.title}</td>
+                            <td className="px-8 py-6">
+                                <p className="font-bold text-slate-800 dark:text-white">{permit.title}</p>
+                                <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mt-0.5">{permit.document_type.replace(/_/g, ' ')}</p>
+                            </td>
                             <td className="px-8 py-6 text-slate-500 dark:text-gray-400 font-medium">{permit.issuing_authority || "AI Processing..."}</td>
                             <td className="px-8 py-6 text-slate-500 dark:text-gray-400 font-mono text-xs">{permit.expiry_date || "---"}</td>
                             <td className="px-8 py-6">
-                              <span className={`px-3 py-1 text-[10px] font-black rounded-full uppercase tracking-tighter ${
-                                status === "Valid" ? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400" : 
-                                status === "Expiring Soon" ? "bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400" : 
-                                status === "Processing" ? "bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-300" : "bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400"
+                              <span className={`px-3 py-1 text-[10px] font-black rounded-full uppercase tracking-tighter border ${
+                                status === "Valid" ? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800" : 
+                                status === "Expiring Soon" ? "bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-800" : 
+                                status === "Processing" ? "bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-300 border-slate-200 dark:border-slate-600" : "bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 border-rose-100 dark:border-rose-800"
                               }`}>
                                 {status}
                               </span>
@@ -281,7 +287,7 @@ export default function Permits() {
           <div className="bg-white dark:bg-slate-800 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             
             <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-700/50">
-              <h3 className="text-lg font-black text-slate-900 dark:text-white">Upload Document</h3>
+              <h3 className="text-lg font-black text-slate-900 dark:text-white">Upload Business Permit</h3>
               <button 
                 onClick={() => {
                   setIsUploadModalOpen(false);
@@ -297,7 +303,6 @@ export default function Permits() {
 
             <form onSubmit={handleUploadSubmit} className="p-6 space-y-5">
               
-              {/* --- NEW: Document Title Input --- */}
               <div>
                 <label className="block text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-1.5">
                   Document Title
@@ -311,10 +316,9 @@ export default function Permits() {
                 />
               </div>
 
-              {/* --- NEW: Document Type Select --- */}
               <div>
                 <label className="block text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-1.5">
-                  Category
+                  Expected Type (AI will verify)
                 </label>
                 <select 
                   value={documentType}

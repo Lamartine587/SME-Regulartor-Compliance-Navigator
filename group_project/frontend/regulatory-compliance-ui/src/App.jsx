@@ -22,14 +22,41 @@ import ResetPassword from "./Auth/ResetPassword";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import PublicRoute from "./routes/PublicRoute";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import Transactions from './pages/Transactions';
+import PersonalVault from './pages/PersonalVault';
 
 function App() {
   return (
     <ThemeProvider>
       <Router>
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+          
+          {/* CHANGED: Path matched to sidebar /login redirect */}
+          <Route path="/login" element={<PublicRoute><SignIn /></PublicRoute>} /> 
+          
+          <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
+          <Route path="/verify-otp" element={<PublicRoute><VerifyOTP/></PublicRoute>} />
+          <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />
+         
+          {/* Protected Vault Routes */}
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard/></ProtectedRoute>} />
+          <Route path="/permits" element={<ProtectedRoute><Permits /></ProtectedRoute>} />
+          
+          {/* FIXED: Changed /document-vault to /documents to match Sidebar.jsx */}
+          <Route path="/documents" element={<ProtectedRoute><DocumentVault /></ProtectedRoute>} />
+          
+          <Route path="/reminders" element={<ProtectedRoute><Reminders /></ProtectedRoute>} />
+          <Route path="/transactions" element={<ProtectedRoute><Transactions /></ProtectedRoute>} />
+          <Route path="/personal" element={<ProtectedRoute><PersonalVault /></ProtectedRoute>} />
+          
+          {/* Profile & Settings */}
+          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 
+<<<<<<< HEAD
         <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
         <Route path="/Auth/SignIn" element={<PublicRoute><SignIn /></PublicRoute>} /> 
         <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
@@ -45,16 +72,19 @@ function App() {
         
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+=======
+          {/* Admin Routes */}
+          <Route element={<AdminRoute />}>
+            <Route path="/admin/errors" element={<AdminErrors />} />
+          </Route>
+>>>>>>> 8ec3536c638ea97c3f8cd775ec92abd24a49a568
 
-        <Route element={<AdminRoute />}>
-          <Route path="/admin/errors" element={<AdminErrors />} />
-        </Route>
-
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Router>
+          {/* Wildcard Catch-all */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Router>
     </ThemeProvider>
-  )
+  );
 }
 
 export default App;

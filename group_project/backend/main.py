@@ -24,15 +24,13 @@ from api.routes_knowledge import router as knowledge_router
 from api.routes_vault import router as vault_router
 from api.routes_profile import router as profile_router
 from api.admin import router as admin_router 
-# --- NEW: Import the Notifications Router ---
 from api.routes_notifications import router as notifications_router 
-
-# Initialize NeonDB Tables
-Base.metadata.create_all(bind=engine)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("🚀 Starting SME Navigator Services...")
+    # Initialize NeonDB Tables on startup
+    Base.metadata.create_all(bind=engine)
     os.makedirs("uploads", exist_ok=True)
     start_reminder_scheduler()
     yield 
@@ -45,37 +43,46 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# --- ACTIVATE MONGODB ERROR LOGGING ---
-setup_error_handlers(app) 
-
-# --- COOP HOTFIX MIDDLEWARE ---
-@app.middleware("http")
-async def add_security_headers(request: Request, call_next):
-    response = await call_next(request)
-    # This header prevents the Google Auth popup from being blocked or throwing warnings
-    response.headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups"
-    return response
-
-# Mount Static Files
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
-
+# 1. CORS MIDDLEWARE (Must be added BEFORE other custom middlewares to handle preflights correctly)
 # Configure CORS
+origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:8000",
+    # Add your specific ngrok URL here (use https!)
+    "https://warner-nonexhortatory-marybeth.ngrok-free.dev",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Restricted to specific frontend domain in production
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Register Routers (USSD removed, Notifications added)
+# 2. CUSTOM SECURITY MIDDLEWARE
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    # This header prevents the Google Auth popup from being blocked
+    response.headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups"
+    return response
+
+# 3. ERROR LOGGING
+setup_error_handlers(app) 
+
+# Mount Static Files
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+
+# Register Routers
 routers = [
     (auth_router, "Authentication"),
     (profile_router, "Profile"),
     (dashboard_router, "Dashboard"),
     (knowledge_router, "Knowledge Base"),
     (vault_router, "Document Vault"),
-    (notifications_router, "Notifications"), # <--- Hooked up here!
+    (notifications_router, "Notifications"),
     (admin_router, "Admin") 
 ]
 
