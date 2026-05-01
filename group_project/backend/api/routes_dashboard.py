@@ -1,11 +1,12 @@
 from datetime import date
+from sys import api_version
 from typing import List
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from core.deps import get_current_user
-from db.neon_session import get_neon_db
+from db.neon_session import get_db
 from models.document_model import ComplianceDocument
 from schemas.dashboard_schema import DashboardSummary, UpcomingExpiry
 
@@ -23,7 +24,7 @@ REQUIRED_DOCUMENT_TYPES: List[str] = [
 
 @router.get("/summary", response_model=DashboardSummary)
 def get_dashboard_summary(
-    db: Session = Depends(get_neon_db),
+    db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
     today = date.today()
@@ -88,4 +89,3 @@ def get_dashboard_summary(
         total_expired_or_missing=total_expired_or_missing,
         upcoming_expiries=upcoming_items,
     )
-

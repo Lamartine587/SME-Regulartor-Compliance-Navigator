@@ -5,7 +5,7 @@ from typing import List
 from pydantic import BaseModel
 
 from core.security import get_current_user
-from db.neon_session import get_neon_db
+from db.neon_session import get_db
 from models.user_model import User
 from models.notification_model import Notification
 
@@ -27,7 +27,7 @@ class NotificationResponse(BaseModel):
 @router.get("/", response_model=List[NotificationResponse])
 async def get_user_notifications(
     current_user: User = Depends(get_current_user),
-    neon_db: Session = Depends(get_neon_db)
+    neon_db: Session = Depends(get_db)
 ):
     """Fetches all notifications for the logged-in user, sorted by newest first."""
     notifications = neon_db.query(Notification).filter(
@@ -40,7 +40,7 @@ async def get_user_notifications(
 async def mark_notification_read(
     notification_id: int,
     current_user: User = Depends(get_current_user),
-    neon_db: Session = Depends(get_neon_db)
+    neon_db: Session = Depends(get_db)
 ):
     """Allows the frontend to mark an alert as read."""
     notification = neon_db.query(Notification).filter(

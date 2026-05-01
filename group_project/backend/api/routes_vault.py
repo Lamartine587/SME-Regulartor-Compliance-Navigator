@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status,
 from sqlalchemy.orm import Session
 
 from core.deps import get_current_user
-from db.neon_session import get_neon_db, SessionLocal
+from db.neon_session import get_db, SessionLocal
 from models.document_model import ComplianceDocument
 from schemas.document_schema import DocumentResponse
 from core.compliance_engine import ComplianceEngine
@@ -48,7 +48,7 @@ async def upload_document(
     issue_date: str | None = Form(default=None),
     expiry_date: str | None = Form(default=None),
     file: UploadFile = File(...),
-    db: Session = Depends(get_neon_db),
+    db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
     # 1. Generate hash and check for duplicates
@@ -111,7 +111,7 @@ async def upload_document(
 
 @router.get("/documents", response_model=List[DocumentResponse])
 def list_documents(
-    db: Session = Depends(get_neon_db),
+    db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
     return (
@@ -124,7 +124,7 @@ def list_documents(
 @router.get("/documents/{document_id}", response_model=DocumentResponse)
 def get_document(
     document_id: int,
-    db: Session = Depends(get_neon_db),
+    db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
     document = db.query(ComplianceDocument).filter(
@@ -139,7 +139,7 @@ def get_document(
 @router.delete("/documents/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_document(
     document_id: int,
-    db: Session = Depends(get_neon_db),
+    db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
     document = db.query(ComplianceDocument).filter(

@@ -3,6 +3,7 @@ import json
 import re
 import hashlib
 import logging
+import uuid
 from datetime import datetime, timezone
 from motor.motor_asyncio import AsyncIOMotorClient
 from sqlalchemy.orm import Session
@@ -10,8 +11,8 @@ from fastapi_mail import FastMail, MessageSchema, ConnectionConfig
 from devsms import DevSMSClient
 
 # Pydantic & GenAI
-from pydantic import BaseModel, Field
-from typing import Optional, List
+from pydantic import BaseModel, Field, validator
+from typing import Optional, List, Dict, Any
 from google import genai 
 from google.genai import types
 
@@ -25,29 +26,32 @@ from models.document_model import ComplianceDocument
 from models.user_model import User 
 from models.notification_model import Notification
 
-# Setup detailed logging for IT administration
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("ComplianceEngine")
-
-# Database Connections
-mongo_client = AsyncIOMotorClient(settings.MONGODB_URL)
-mongo_db = mongo_client["SMERegulator"]
-
-# Mail Configuration
-mail_conf = ConnectionConfig(
-    MAIL_USERNAME=settings.SENDER_EMAIL,
-    MAIL_PASSWORD=settings.SMTP_PASSWORD,
-    MAIL_FROM=settings.SENDER_EMAIL,
-    MAIL_PORT=settings.SMTP_PORT,
-    MAIL_SERVER=settings.SMTP_SERVER,
-    MAIL_STARTTLS=False,
-    MAIL_SSL_TLS=True
+# --- 1. ENHANCED SYSTEM LOGGING ---
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
+logger = logging.getLogger("AngaSystems.ComplianceEngine")
 
-# --- 1. DATA SCHEMAS (Expanded Scope) ---
+# --- 2. THE MASTER REGULATORY BLUEPRINT ---
+# This expanded matrix covers all business scales across Kenya.
+BUSINESS_REQUIREMENTS = {
+    "micro_kiosk": ["Single Business Permit", "KRA PIN"],
+    "retail_hardware": ["Single Business Permit", "KRA PIN", "Fire Clearance", "Weights & Measures", "VAT Certificate"],
+    "pharmacy_medical": ["Single Business Permit", "PPB License", "Pharmacist Practicing License", "KRA PIN"],
+    "catering_hospitality": ["Single Business Permit", "Health Certificate", "Liquor License", "Fire Clearance", "MCSK"],
+    "logistics_transport": ["Single Business Permit", "NTSA Operating License", "Transit Goods Permit", "Insurance"],
+    "construction_eng": ["Single Business Permit", "NCA Registration", "CR12 Certificate", "Tax Compliance"],
+    "professional_firm": ["Single Business Permit", "Professional Practicing License", "KRA PIN", "Indemnity Insurance"],
+    "tech_startup": ["Single Business Permit", "KRA PIN", "Data Protection Registration", "IP Certificates"]
+}
+
+# --- 3. DATA SCHEMAS (Exhaustive) ---
 
 class DocumentClassification(BaseModel):
-    document_type: str = Field(description="Strictly one of: 'license', 'invoice', 'delivery_note', 'unknown'")
+    document_type: str = Field(description="Strictly: 'license', 'invoice', 'delivery_note', 'tax_cert', or 'unknown'")
+    business_niche: str = Field(description="The sector the business operates in.")
+    confidence_score: float = Field(default=0.0)
 
 class InvoiceItem(BaseModel):
     item_name: str
@@ -55,48 +59,41 @@ class InvoiceItem(BaseModel):
     unit_price: float
     total_price: float
 
-class InvoiceSchema(BaseModel):
-    title: str = Field(description="Official document heading, e.g., 'TAX INVOICE'")
-    vendor_name: str = Field(description="The company issuing the bill")
-    invoice_number: str = Field(description="Unique reference number")
-    total_amount: float = Field(description="The final Grand Total including tax")
-    due_date: Optional[str] = Field(description="Deadline for payment in YYYY-MM-DD")
-    items: List[InvoiceItem] = Field(description="List of all services/products provided")
-    summary: str = Field(description="Brief professional overview of the transaction")
+class UniversalExtractionSchema(BaseModel):
+    title: str = Field(description="Official heading, e.g., 'TAX INVOICE' or 'SINGLE BUSINESS PERMIT'")
+    authority: str = Field(description="Issuing body, e.g., KRA, County Govt, NTSA")
+    county: Optional[str] = Field(description="The specific Kenyan County, e.g., Kakamega, Nairobi[cite: 1]")
+    vendor_details: Optional[str] = Field(description="Name and PIN of the issuing entity")
+    invoice_number: Optional[str] = Field(description="Unique reference, e.g., INV-7991")
+    total_amount: float = Field(default=0.0, description="Grand total, e.g., 257,102.40[cite: 1]")
+    issue_date: Optional[str] = Field(description="YYYY-MM-DD")
+    expiry_date: Optional[str] = Field(description="YYYY-MM-DD[cite: 1]")
+    items: List[InvoiceItem] = []
+    summary: str = Field(description="A technical breakdown of the document context.")
 
-class LicenseSchema(BaseModel):
-    title: str = Field(description="Official document title, e.g., 'SINGLE BUSINESS PERMIT'")
-    authority: str = Field(description="Entity that issued the permit (e.g., KRA, County Govt)")
-    county: Optional[str] = Field(description="Kenyan county of jurisdiction")
-    issue: Optional[str] = Field(description="Issue date in YYYY-MM-DD")
-    expiry: Optional[str] = Field(description="Expiration date in YYYY-MM-DD")
-    summary: str = Field(description="Technical summary of the compliance status")
+    @validator('total_amount')
+    def validate_amount(cls, v):
+        return round(v, 2)
 
-class DeliveryNoteSchema(BaseModel):
-    title: str = Field(description="Exact document title")
-    supplier_name: str
-    delivery_date: Optional[str] = Field(description="YYYY-MM-DD")
-    received_by: Optional[str] = Field(description="Name of staff who signed for it")
-    summary: str
-
-# --- 2. THE ENGINE ---
+# --- 4. THE COMPLIANCE ENGINE ---
 
 class ComplianceEngine:
     
     @staticmethod
     def run_fallback_ocr(file_path: str):
         """
-        Comprehensive local extraction engine using Tesseract and heavy Regex.
-        Specifically optimized for Kenyan document layouts.
+        The Robust Fail-Safe: Optimized for Kenyan typography and local stamps.
         """
-        logger.info(f"Initiating local synchronization service for: {file_path}")
+        trace_id = str(uuid.uuid4())[:8]
+        logger.info(f"[{trace_id}] Manual Sync Triggered: {file_path}")
         text = ""
         try:
-            # 1. Image Conversion
+            # Multi-page handling
             if file_path.lower().endswith('.pdf'):
                 images = convert_from_path(file_path)
-                for img in images:
+                for i, img in enumerate(images):
                     text += pytesseract.image_to_string(img)
+                    logger.info(f"[{trace_id}] Processed page {i+1}")
             else:
                 img = Image.open(file_path)
                 text += pytesseract.image_to_string(img)
@@ -104,305 +101,233 @@ class ComplianceEngine:
             text_upper = text.upper()
             lines = [l.strip() for l in text_upper.split('\n') if l.strip()]
 
-            # 2. Document Title Extraction (Top-of-file analysis)
-            title = "UNSPECIFIED DOCUMENT"
-            headers = ["TAX INVOICE", "SINGLE BUSINESS PERMIT", "FIRE SAFETY", "DELIVERY NOTE", "KRA COMPLIANCE"]
-            for line in lines[:8]:
-                for h in headers:
-                    if h in line:
-                        title = line
-                        break
+            # 1. Heading Analysis[cite: 1]
+            title = "UNIDENTIFIED DOCUMENT"
+            potential_titles = ["INVOICE", "PERMIT", "LICENSE", "CERTIFICATE", "DELIVERY", "RECEIPT"]
+            for line in lines[:10]:
+                if any(pt in line for pt in potential_titles):
+                    title = line
+                    break
+
+            # 2. County & Authority Logic[cite: 1]
+            counties = ["NAIROBI", "MOMBASA", "KISUMU", "NAKURU", "KIAMBU", "KAKAMEGA", "UASIN GISHU", "MACHAKOS"]
+            found_county = next((c for c in counties if c in text_upper), "National")
             
-            # 3. County & Issuing Authority Mapping
-            kenyan_counties = [
-                "NAIROBI", "MOMBASA", "KISUMU", "NAKURU", "KIAMBU", "KAKAMEGA", "UASIN GISHU",
-                "MACHAKOS", "KWALE", "KILIFI", "NYERI", "MURANG'A", "LAIKIPIA", "MERU"
-            ]
-            found_county = next((c for c in kenyan_counties if c in text_upper), "National")
-            
-            authority = "Unknown Regulatory Body"
-            if any(k in text_upper for k in ["KRA", "REVENUE", "PIN"]):
+            authority = "Public Authority"
+            if "KRA" in text_upper or "REVENUE" in text_upper:
                 authority = "Kenya Revenue Authority"
-            elif "COUNTY" in text_upper or "GOVERNMENT" in text_upper:
-                authority = f"{found_county.capitalize()} City County"
+            elif "COUNTY" in text_upper:
+                authority = f"{found_county.capitalize()} County Government"
+            elif "NTSA" in text_upper:
+                authority = "National Transport and Safety Authority"
 
-            # 4. Detailed Financial Extraction[cite: 1, 2]
-            doc_type = "invoice" if "INVOICE" in title or "TOTAL" in text_upper else "license"
+            # 3. Financial Totals (Greedy Search)[cite: 1]
             total_val = 0.0
-            extracted_items = []
-            
-            if doc_type == "invoice":
-                # Hunt for KES/KSH totals (e.g. 257,102.40)
-                amt_match = re.search(r'(?:GRAND TOTAL|TOTAL|KES|KSH)\s*[:=]?\s*([\d,]+\.\d{2})', text_upper)
-                if amt_match:
-                    total_val = float(amt_match.group(1).replace(',', ''))
-                
-                # Scan for line items (e.g. Consulting Hours)
-                for line in lines:
-                    prices = re.findall(r'([\d,]+\.\d{2})', line)
-                    if prices and len(line) > 12:
-                        extracted_items.append({
-                            "item_name": line.split('|')[0].strip() if '|' in line else line[:25].strip(),
-                            "quantity": 1,
-                            "unit_price": float(prices[0].replace(',', '')),
-                            "total_price": float(prices[-1].replace(',', ''))
-                        })
+            # Matches formats like 257,102.40 or 215,981.56
+            amt_match = re.search(r'(?:GRAND TOTAL|TOTAL|KES|KSH)\s*[:=]?\s*([\d,]+\.\d{2})', text_upper)
+            if amt_match:
+                total_val = float(amt_match.group(1).replace(',', ''))
 
-            # 5. Temporal Data (Dates)
+            # 4. Temporal Scanning (Issue & Expiry)
             date_regex = r'\b(?:\d{4}[-/]\d{2}[-/]\d{2}|\d{2}[-/]\d{2}[-/]\d{4})\b'
             raw_dates = re.findall(date_regex, text)
-            normalized_dates = []
+            clean_dates = []
             for rd in raw_dates:
                 try:
-                    # Handle varying delimiters
-                    d_str = rd.replace('/', '-')
-                    if len(d_str.split('-')[0]) == 2: # DD-MM-YYYY
-                        normalized_dates.append(datetime.strptime(d_str, "%d-%m-%Y").strftime("%Y-%m-%d"))
-                    else: # YYYY-MM-DD
-                        normalized_dates.append(datetime.strptime(d_str, "%Y-%m-%d").strftime("%Y-%m-%d"))
+                    d_fmt = rd.replace('/', '-')
+                    if len(d_fmt.split('-')[0]) == 2:
+                        parsed = datetime.strptime(d_fmt, "%d-%m-%Y").strftime("%Y-%m-%d")
+                    else:
+                        parsed = datetime.strptime(d_fmt, "%Y-%m-%d").strftime("%Y-%m-%d")
+                    clean_dates.append(parsed)
                 except ValueError: continue
             
-            normalized_dates.sort()
-            expiry_val = normalized_dates[-1] if normalized_dates else None
+            clean_dates.sort()
+            expiry = clean_dates[-1] if clean_dates else None
 
             return {
-                "system_doc_type": doc_type,
+                "system_doc_type": "invoice" if "INVOICE" in text_upper else "license",
                 "title": title,
                 "authority": authority,
-                "vendor_name": authority,
                 "county": found_county,
                 "total_amount": total_val,
-                "due_date": expiry_val,
-                "expiry": expiry_val,
-                "items": extracted_items,
-                "summary": f"Localized verification of {title} successful."
+                "expiry_date": expiry,
+                "items": [],
+                "summary": f"Fallback verification success. {title} from {found_county} recorded."
             }
         except Exception as e:
-            logger.error(f"Fallback failure: {e}")
+            logger.error(f"[{trace_id}] Fallback Critical Failure: {e}")
             return None
 
     @staticmethod
-    async def run_primary_scan(file_path: str):
+    async def run_universal_ai_scan(file_path: str):
         """
-        Gemini 2.0 AI scanning layer. High-level reasoning for complex items.
+        Primary Intelligence Layer: Gemini 2.0 Flash.
         """
         try:
             client = genai.Client(api_key=settings.GEMINI_API_KEY)
             sample_file = client.files.upload(file=file_path)
             
-            # Step 1: Broad Categorization
-            class_res = client.models.generate_content(
+            # PHASE 1: Business Context Discovery
+            meta_res = client.models.generate_content(
                 model="gemini-2.0-flash", 
-                contents=["Categorize this document strictly.", sample_file],
+                contents=["Examine this document. What is the business type and document category?", sample_file],
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
                     response_schema=DocumentClassification,
-                    temperature=0.1 
+                    temperature=0.1
                 )
             )
-            dtype = json.loads(class_res.text).get("document_type", "unknown")
+            meta = json.loads(meta_res.text)
 
-            # Step 2: Deep Extraction
-            schema_map = {"license": LicenseSchema, "invoice": InvoiceSchema, "delivery_note": DeliveryNoteSchema}
-            extraction_prompt = f"""
-            Extract the official Title, Authority, County, and all individual Itemized totals from this {dtype}.
-            If it is an invoice, capture every line item, quantity, and unit price.[cite: 1, 2]
-            Today's Date: {datetime.now().date()}
+            # PHASE 2: Deep Regulatory Extraction[cite: 1]
+            prompt = f"""
+            Perform a full regulatory extraction for a {meta['business_niche']} business.
+            Identify: Official Title, Issuing Body, County (e.g. Kakamega), Expiry, and all line items.
+            If an invoice, capture total liabilities like KES 257,102.40.[cite: 1]
             """
             
             ext_res = client.models.generate_content(
                 model="gemini-2.0-flash", 
-                contents=[extraction_prompt, sample_file],
+                contents=[prompt, sample_file],
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
-                    response_schema=schema_map.get(dtype),
+                    response_schema=UniversalExtractionSchema,
                     temperature=0.1
                 )
             )
 
             client.files.delete(name=sample_file.name)
-            final_data = json.loads(ext_res.text)
-            final_data["system_doc_type"] = dtype 
-            return final_data
+            data = json.loads(ext_res.text)
+            data["business_type"] = meta["business_niche"]
+            data["system_doc_type"] = meta["document_type"]
+            return data
         except Exception as e:
-            logger.warning(f"AI Scan interrupted: {e}")
+            logger.error(f"AI Scan Error: {e}")
             return None 
 
     @staticmethod
-    async def process_new_upload(doc_id: int, db: Session, user_email: str, phone: str = None):
+    async def process_upload(doc_id: int, db: Session, user_email: str, phone: str = None):
         """
-        Main pipeline orchestrator. Handles DB commits and notification triggers.
+        Master Pipeline. Manages PostgreSQL, MongoDB, and 3-Channel Notifications.
         """
         doc = db.query(ComplianceDocument).filter(ComplianceDocument.id == doc_id).first()
         if not doc: return
 
-        # 1. Execution Layer
-        data = await ComplianceEngine.run_primary_scan(doc.file_path)
+        # 1. EXECUTION
+        data = await ComplianceEngine.run_universal_ai_scan(doc.file_path)
         if not data:
             data = ComplianceEngine.run_fallback_ocr(doc.file_path)
 
-        # 2. Failure Handling
+        # 2. VALIDATION & FALLBACK
         if not data:
             doc.document_type = "MANUAL_REVIEW"
             db.commit()
-            await ComplianceEngine.send_failure_notifications(doc, user_email, phone, db)
+            await ComplianceEngine.dispatch_alerts(doc, None, user_email, phone, db, success=False)
             return
 
-        # 3. Success & SQL Sync
+        # 3. DATABASE SYNCHRONIZATION
         try:
-            dtype = data.get("system_doc_type", "unknown")
-            doc.document_type = dtype
+            # Sync to Neon SQL (PostgreSQL)
+            doc.document_type = data.get("system_doc_type", "license")
             doc.title = data.get("title", doc.title)
-            doc.issuing_authority = data.get("authority", data.get("vendor_name", "Unknown"))
+            doc.issuing_authority = data.get("authority", "Unknown")
+            # Capture totals like 215,981.56
+            doc.financial_amount = data.get("total_amount", 0.0)
             
-            if dtype == "invoice":
-                doc.category = "transaction"
-                # Extraction for INV-7768 (257,102.40) or INV-7991 (215,981.56)[cite: 1, 2]
-                doc.financial_amount = data.get("total_amount", 0.0)
-                if data.get("due_date"):
-                    doc.expiry_date = datetime.strptime(data["due_date"], "%Y-%m-%d").date()
-            else:
-                doc.category = "personal" if any(k in doc.title.lower() for k in ["id", "driver", "passport"]) else "business"
-                if data.get("expiry"):
-                    doc.expiry_date = datetime.strptime(data["expiry"], "%Y-%m-%d").date()
-
+            if data.get("expiry_date"):
+                doc.expiry_date = datetime.strptime(data["expiry_date"], "%Y-%m-%d").date()
+            
+            doc.category = "transaction" if doc.document_type == "invoice" else "business"
             db.commit()
 
-            # 4. MongoDB Persistent Storage for Analytics
+            # Sync to MongoDB (Granular Analysis)[cite: 1]
             await mongo_db.document_meta.insert_one({
                 "neon_id": doc_id,
                 "user": user_email,
-                "authority": data.get("authority"),
+                "business_type": data.get("business_type"),
                 "county": data.get("county"),
-                "items": data.get("items", []), # Detailed line items[cite: 1, 2]
+                "authority": doc.issuing_authority,
+                "items": data.get("items", []), # Detailed breakdown
                 "total": data.get("total_amount", 0.0),
+                "summary": data.get("summary", ""),
                 "processed_at": datetime.now(timezone.utc)
             })
 
-            # 5. Mandatory Notification Dispatch
-            await ComplianceEngine.send_success_notifications(doc, data, user_email, phone, db)
+            # 4. NOTIFICATION DISPATCH
+            await ComplianceEngine.dispatch_alerts(doc, data, user_email, phone, db, success=True)
             
         except Exception as e:
-            logger.error(f"Post-processing DB error: {e}")
+            logger.critical(f"Database Integrity Error: {e}")
             db.rollback()
 
-    # --- 3. THE "MEATY" NOTIFICATION SUITE ---
-
     @staticmethod
-    async def send_success_notifications(doc, data, user_email, phone, db):
+    async def dispatch_alerts(doc, data, user_email, phone, db, success=True):
         """
-        Ensures Web, Email, and SMS are sent as a MUST.
+        The 3-Channel Notification Suite (Web, Email, SMS).
         """
-        
-        # A. WEB NOTIFICATION
-        try:
-            db.add(Notification(
-                user_id=doc.user_id, 
-                title="Vault Entry Synchronized", 
-                message=f"'{doc.title}' verified. Issued by {doc.issuing_authority} ({data.get('county', 'National')})."
-            ))
+        if not success:
+            # Web Alert for failure
+            db.add(Notification(user_id=doc.user_id, title="Action Required", message=f"Manual sync needed for {doc.title}."))
             db.commit()
-        except Exception: db.rollback()
+            return
 
-        # B. STYLIZED EMAIL (High-Meat Template)
-        try:
-            # Generate Item Rows for Invoices[cite: 1, 2]
-            items_rows = ""
-            for item in data.get('items', []):
-                items_rows += f"""
-                <tr>
-                    <td style="padding: 12px; border-bottom: 1px solid #eef2f6; color: #334155;">{item['item_name']}</td>
-                    <td style="padding: 12px; border-bottom: 1px solid #eef2f6; text-align: center; color: #334155;">{item['quantity']}</td>
-                    <td style="padding: 12px; border-bottom: 1px solid #eef2f6; text-align: right; color: #334155; font-weight: 600;">KES {item['total_price']:,}</td>
-                </tr>
-                """
-            
-            financial_block = ""
-            if items_rows:
-                financial_block = f"""
-                <div style="margin-top: 25px;">
-                    <h3 style="font-size: 14px; text-transform: uppercase; color: #64748b; margin-bottom: 10px;">Itemized Breakdown</h3>
-                    <table style="width: 100%; border-collapse: collapse; background: #ffffff; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0;">
-                        <thead style="background: #f8fafc;">
-                            <tr>
-                                <th style="text-align: left; padding: 12px; font-size: 12px; color: #475569;">Description</th>
-                                <th style="text-align: center; padding: 12px; font-size: 12px; color: #475569;">Qty</th>
-                                <th style="text-align: right; padding: 12px; font-size: 12px; color: #475569;">Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody>{items_rows}</tbody>
+        # 1. WEB ALERT
+        db.add(Notification(
+            user_id=doc.user_id, 
+            title="Compliance Verified", 
+            message=f"'{doc.title}' added to vault for {data.get('county')} jurisdiction."
+        ))
+        db.commit()
+
+        # 2. STYLIZED EMAIL (The "Meat")[cite: 1]
+        items_html = "".join([
+            f"<tr><td style='padding:12px; border-bottom:1px solid #e2e8f0;'>{i['item_name']}</td>"
+            f"<td style='text-align:right; padding:12px; border-bottom:1px solid #e2e8f0; font-weight:bold;'>KES {i['total_price']:,}</td></tr>" 
+            for i in data.get('items', [])
+        ])
+
+        email_body = f"""
+        <div style="font-family: 'Inter', sans-serif; max-width: 650px; margin: auto; border: 1px solid #f1f5f9; border-radius: 24px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.1);">
+            <div style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); padding: 50px; color: white; text-align: center;">
+                <h1 style="margin: 0; font-size: 28px; letter-spacing: -1px;">Vault Verification Success</h1>
+                <p style="opacity: 0.9; font-size: 16px;">SME Regulatory Compliance Navigator</p>
+            </div>
+            <div style="padding: 40px; background: #ffffff;">
+                <p style="font-size: 16px; color: #475569;">The document <b style="color: #1e293b;">{doc.title}</b> has been successfully verified for your <b>{data.get('business_type', 'enterprise')}</b>.</p>
+                <div style="background: #f8fafc; border-radius: 16px; padding: 25px; margin: 30px 0; border: 1px solid #e2e8f0;">
+                    <table style="width: 100%;">
+                        <tr><td style="color: #64748b; font-size: 12px; text-transform: uppercase; font-weight: 800;">Jurisdiction</td></tr>
+                        <tr><td style="font-size: 18px; font-weight: 700; color: #1e293b; padding-bottom: 15px;">{data.get('county', 'National')} County</td></tr>
+                        <tr><td style="color: #64748b; font-size: 12px; text-transform: uppercase; font-weight: 800;">Issuing Authority</td></tr>
+                        <tr><td style="font-size: 18px; font-weight: 700; color: #1e293b; padding-bottom: 15px;">{doc.issuing_authority}</td></tr>
+                        <tr><td style="color: #64748b; font-size: 12px; text-transform: uppercase; font-weight: 800;">Expiration / Due Date</td></tr>
+                        <tr><td style="font-size: 18px; font-weight: 700; color: #e11d48;">{doc.expiry_date or 'ACTIVE'}</td></tr>
                     </table>
-                    <div style="padding: 15px; background: #f1f5f9; text-align: right; font-weight: bold; font-size: 18px; color: #1e293b;">
-                        Grand Total: KES {data.get('total_amount', 0.0):,}
-                    </div>
                 </div>
-                """
-
-            email_body = f"""
-            <div style="font-family: 'Inter', -apple-system, sans-serif; background: #f4f7fa; padding: 40px 20px;">
-                <div style="max-width: 600px; margin: auto; background: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
-                    <div style="background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%); padding: 40px; text-align: center;">
-                        <div style="background: rgba(255,255,255,0.2); width: 60px; height: 60px; border-radius: 15px; margin: 0 auto 20px; line-height: 60px; font-size: 30px;">✅</div>
-                        <h1 style="color: white; margin: 0; font-size: 26px; font-weight: 800;">Verification Successful</h1>
-                        <p style="color: rgba(255,255,255,0.8); margin: 10px 0 0;">Secure Vault Synchronization Complete</p>
-                    </div>
-                    <div style="padding: 40px;">
-                        <p style="font-size: 16px; line-height: 1.6; color: #475569;">The document <b style="color: #1e293b;">{doc.title}</b> has been meticulously scanned and validated by the SME Navigator engine.</p>
-                        <div style="background: #f8fafc; border-left: 5px solid #6366f1; padding: 25px; margin: 30px 0; border-radius: 8px;">
-                            <table style="width: 100%;">
-                                <tr>
-                                    <td style="padding-bottom: 15px;">
-                                        <span style="display: block; font-size: 12px; color: #94a3b8; text-transform: uppercase; font-weight: bold;">Issuing Entity</span>
-                                        <span style="font-size: 16px; font-weight: 700; color: #1e293b;">{doc.issuing_authority} ({data.get('county', 'National')})</span>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>
-                                        <span style="display: block; font-size: 12px; color: #94a3b8; text-transform: uppercase; font-weight: bold;">Compliance Status / Expiry</span>
-                                        <span style="font-size: 16px; font-weight: 700; color: #e11d48;">{doc.expiry_date or 'VALID INDEFINITELY'}</span>
-                                    </td>
-                                </tr>
-                            </table>
-                        </div>
-                        {financial_block}
-                        <div style="text-align: center; margin-top: 40px;">
-                            <a href="{settings.FRONTEND_URL}/dashboard" style="background: #6366f1; color: white; padding: 16px 32px; border-radius: 12px; text-decoration: none; font-weight: bold; box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.4);">Access Your Dashboard</a>
-                        </div>
-                    </div>
-                    <div style="background: #f1f5f9; padding: 30px; text-align: center; border-top: 1px solid #e2e8f0;">
-                        <p style="font-size: 12px; color: #94a3b8; margin: 0;">&copy; 2026 Anga Systems SME Navigator. This is an official system transmission.</p>
-                    </div>
+                {f'<h3 style="font-size: 14px; color: #64748b; text-transform: uppercase;">Ledger Entries</h3><table style="width:100%; margin-bottom: 20px;">{items_html}</table>' if items_html else ''}
+                <div style="padding: 20px; background: #f1f5f9; border-radius: 12px; text-align: right;">
+                    <span style="font-size: 14px; color: #64748b;">Transaction Total:</span><br/>
+                    <b style="font-size: 24px; color: #1e293b;">KES {data.get('total_amount', 0.0):,}</b>
+                </div>
+                <div style="text-align: center; margin-top: 40px;">
+                    <a href="{settings.FRONTEND_URL}/dashboard" style="background: #4f46e5; color: white; padding: 18px 35px; border-radius: 14px; text-decoration: none; font-weight: 800; display: inline-block; box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.4);">Open SME Navigator</a>
                 </div>
             </div>
-            """
-            
-            fm = FastMail(mail_conf)
-            msg = MessageSchema(subject=f"✅ Document Verified: {doc.title}", recipients=[user_email], body=email_body, subtype="html")
-            await fm.send_message(msg)
-        except Exception as e: logger.error(f"Email failure: {e}")
-
-        # C. SMS (Mandatory)
-        if phone:
-            try:
-                # Format to E.164 for Kenya
-                fmt_phone = "+254" + phone[1:] if phone.startswith("0") else (phone if phone.startswith("+") else "+" + phone)
-                sms_txt = f"SME Nav Success: {doc.title} verified. Issuing Authority: {doc.issuing_authority}. Jurisdiction: {data.get('county')}. Expires: {doc.expiry_date}. Check your email for details."
-                DevSMSClient(api_key=settings.DEVTEXT_API_KEY).send(to=fmt_phone, message=sms_txt)
-            except Exception as e: logger.error(f"SMS failure: {e}")
-
-    @staticmethod
-    async def send_failure_notifications(doc, user_email, phone, db):
-        """
-        Failure alerts are equally stylized and mandatory.
+            <div style="background: #f8fafc; padding: 25px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0;">
+                Official system alert from Anga Systems Compliance Hub.
+            </div>
+        </div>
         """
         try:
-            db.add(Notification(user_id=doc.user_id, title="Action Required: Sync Failed", message=f"We could not auto-verify '{doc.title}'."))
-            db.commit()
-            
-            # Send simplified failure email & SMS
             fm = FastMail(mail_conf)
-            await fm.send_message(MessageSchema(subject=f"⚠️ Action Required: {doc.title}", recipients=[user_email], body=f"Verification failed for {doc.title}. Manual entry required.", subtype="html"))
-            
-            if phone:
-                DevSMSClient(api_key=settings.DEVTEXT_API_KEY).send(to=phone, message=f"SME Navigator Alert: Manual confirmation needed for {doc.title}. Login to verify.")
-        except Exception: pass
+            await fm.send_message(MessageSchema(subject=f"✅ Verified: {doc.title}", recipients=[user_email], body=email_body, subtype="html"))
+        except Exception as e: logger.error(f"Email failure: {e}")
+
+        # 3. MANDATORY SMS
+        if phone:
+            try:
+                fmt_phone = "+254" + phone[1:] if phone.startswith("0") else (phone if phone.startswith("+") else "+" + phone)
+                sms_msg = f"SME Nav: {doc.title} verified. Authority: {doc.issuing_authority}. County: {data.get('county')}. Expires: {doc.expiry_date}. KES {data.get('total_amount', 0.0):,} recorded."
+                DevSMSClient(api_key=settings.DEVTEXT_API_KEY).send(to=fmt_phone, message=sms_msg)
+            except Exception as e: logger.error(f"SMS failure: {e}")

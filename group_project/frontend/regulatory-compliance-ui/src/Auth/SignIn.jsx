@@ -13,7 +13,6 @@ export default function SignIn() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Success handler for Google
   const handleGoogleSuccess = async (credentialResponse) => {
     setLoading(true);
     setError("");
@@ -24,10 +23,10 @@ export default function SignIn() {
         saveToken(data.access_token);
         localStorage.setItem("user_id", data.user_id);
         
-        // Save the role and route accordingly
         const userRole = data.role || "customer";
         localStorage.setItem("user_role", userRole);
 
+        // Standard routing based on project requirements
         if (userRole === "admin") {
           navigate("/admin/errors"); 
         } else {
@@ -52,7 +51,6 @@ export default function SignIn() {
         saveToken(data.access_token);
         localStorage.setItem("user_id", data.user_id);
         
-        // Save the role and route accordingly
         const userRole = data.role || "customer";
         localStorage.setItem("user_role", userRole);
 
@@ -98,7 +96,7 @@ export default function SignIn() {
 
         {error && <div className="bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 p-3 rounded-lg text-center text-sm font-medium">{error}</div>}
 
-        <button type="submit" disabled={loading} className="w-full p-3 rounded-lg text-white font-semibold bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300">
+        <button type="submit" disabled={loading} className="w-full p-3 rounded-lg text-white font-semibold bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 transition-colors">
           {loading ? "Signing In..." : "Sign In"}
         </button>
 
@@ -116,7 +114,7 @@ export default function SignIn() {
             theme="outline"
             size="large"
             shape="pill"
-            width="100%"
+            width="350" // FIXED: Numeric string required, 100% is invalid
           />
         </div>
 

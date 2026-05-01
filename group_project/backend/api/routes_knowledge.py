@@ -1,26 +1,28 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from sqlalchemy.orm import Session
+from typing import List
 
+from db.neon_session import get_db
+from core.deps import get_current_user
 from schemas.knowledge_schema import BusinessProfile, ComplianceItem, ComplianceReport
 from services import knowledge_service
 
-
 router = APIRouter(prefix="/api/knowledge", tags=["Knowledge Base"])
-
 
 @router.get("/industries")
 def industries():
+    """Returns a list of all supported business categories."""
     return {"industries": knowledge_service.get_industries()}
-
 
 @router.get("/counties")
 def counties():
+    """Returns supported Kenyan counties (Nairobi, Kakamega, etc.)."""
     return {"counties": knowledge_service.get_counties()}
 
-
-@router.get("/items", response_model=list[ComplianceItem])
+@router.get("/items", response_model=List[ComplianceItem])
 def list_items():
+    """Exposes the full compliance database."""
     return knowledge_service.list_compliance_items()
-
 
 @router.get("/item/{item_id}", response_model=ComplianceItem)
 def get_item(item_id: str):
@@ -29,62 +31,34 @@ def get_item(item_id: str):
         raise HTTPException(status_code=404, detail="Compliance item not found")
     return item
 
-
 @router.get("/search")
 def search(q: str):
     results = knowledge_service.search_items(q)
     return {"results": results, "count": len(results)}
 
+# --- THE LIVE INTELLIGENCE ENDPOINT ---
 
 @router.post("/compliance/check", response_model=ComplianceReport)
-def check_compliance(profile: BusinessProfile):
-    req_names = knowledge_service.requirements_for_industry(
-        profile.industry, annual_turnover_kes=profile.annual_turnover_kes
-    )
-
-    industry_map, compliance_db, _ = knowledge_service.load_knowledge_base()
-    _ = industry_map  # loaded for cache warm-up / validation
-
-    items = [compliance_db[name] for name in req_names if name in compliance_db]
-    high_priority = sum(1 for item in items if item.get("priority") == "high")
-
-    # Same mock scoring concept as the original knowledge base (until user completion is tracked)
-    compliance_score = max(20, 100 - (high_priority * 8))
-
-    upcoming = [
-        {
-            "title": "Single Business Permit Renewal",
-            "deadline": "March 31, 2026",
-            "authority": "County Government",
-            "days_left": 45,
-        },
-        {
-            "title": "VAT Monthly Return",
-            "deadline": "20th of every month",
-            "authority": "KRA",
-            "days_left": 12,
-        },
-        {
-            "title": "NSSF Monthly Remittance",
-            "deadline": "9th of every month",
-            "authority": "NSSF",
-            "days_left": 3,
-        },
-        {
-            "title": "NHIF Monthly Remittance",
-            "deadline": "9th of every month",
-            "authority": "NHIF/SHA",
-            "days_left": 3,
-        },
-    ]
-
-    return ComplianceReport(
-        business_name=profile.business_name,
-        industry=profile.industry,
-        total_requirements=len(items),
-        high_priority=high_priority,
-        compliance_score=compliance_score,
-        items=items,
-        upcoming_deadlines=upcoming,
-    )
-
+def check_compliance(
+    profile: BusinessProfile, 
+    db: Session = Depends(get_db), 
+    current_user = Depends(get_current_user)
+):
+    """
+    The Core Intelligence Endpoint:
+    Performs a real-time audit by comparing required documents against 
+    the user's actual 'Active' documents in the Vault.
+    """
+    try:
+        # Call the live audit logic from the service
+        # This replaces the mock scoring with a mechanical count of verified docs.
+        report = knowledge_service.get_live_compliance_report(
+            db=db, 
+            user_id=current_user.id, 
+            profile=profile
+        )
+        return report
+        
+    except Exception as e:
+        # Standard fallback if the audit fails
+        raise HTTPException(status_code=500, detail=f"Compliance audit failed: {str(e)}")

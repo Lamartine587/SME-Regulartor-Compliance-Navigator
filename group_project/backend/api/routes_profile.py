@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from db.neon_session import get_neon_db
+from db.neon_session import get_db
 # Make sure to import your new PersonalProfile model
 from models.user_model import BusinessProfile, PersonalProfile, User 
 from schemas.profile_schema import ProfileUpdate, ProfileResponse
@@ -11,7 +11,7 @@ router = APIRouter(prefix="/api/profile", tags=["Profile"])
 @router.get("/", response_model=ProfileResponse)
 async def get_profile(
     current_user: User = Depends(get_current_user),
-    neon_db: Session = Depends(get_neon_db)
+    neon_db: Session = Depends(get_db)
 ):
     # 1. Fetch or Create Business Profile
     bus_profile = neon_db.query(BusinessProfile).filter(BusinessProfile.user_id == current_user.id).first()
@@ -57,7 +57,7 @@ async def get_profile(
 async def update_profile(
     payload: ProfileUpdate,
     current_user: User = Depends(get_current_user),
-    neon_db: Session = Depends(get_neon_db)
+    neon_db: Session = Depends(get_db)
 ):
     bus_profile = neon_db.query(BusinessProfile).filter(BusinessProfile.user_id == current_user.id).first()
     pers_profile = neon_db.query(PersonalProfile).filter(PersonalProfile.user_id == current_user.id).first()

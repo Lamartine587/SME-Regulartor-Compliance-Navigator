@@ -1,13 +1,14 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import path from 'path'
 
 export default defineConfig({
   plugins: [react()],
+  envDir: path.resolve(__dirname, './'), 
   server: {
-    // This allows ngrok to bypass the "Blocked request" security check
     allowedHosts: [
       'warner-nonexhortatory-marybeth.ngrok-free.dev', 
-      '.ngrok-free.dev' // Use this to allow any ngrok tunnel
+      '.ngrok-free.dev' 
     ],
     proxy: {
       '/api': {

@@ -15,7 +15,7 @@ from services import auth_service
 from services.sms_service import send_sms_otp
 from services.email_service import send_email_otp
 from core.security import verify_password, create_access_token, get_current_user 
-from db.neon_session import get_neon_db
+from db.neon_session import get_db # Corrected import
 from db.mongo_session import get_mongo_db
 from models.user_model import User
 
@@ -26,7 +26,6 @@ OTP_EXPIRATION_MINUTES = 15
 class GoogleLoginRequest(BaseModel):
     token: str
 
-# Added schema for the intermediate reset OTP check
 class VerifyResetOTPRequest(BaseModel):
     email: str
     otp_code: str
@@ -34,8 +33,8 @@ class VerifyResetOTPRequest(BaseModel):
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register(
     user: UserCreate,
-    neon_db: Session = Depends(get_neon_db),
-    mongo_db=Depends(get_mongo_db)
+    neon_db: Session = Depends(get_db), # Fixed name
+    mongo_db = Depends(get_mongo_db)
 ):
     if auth_service.get_user_by_email(neon_db, user.email):
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -61,15 +60,14 @@ async def register(
         return {"message": "Registration successful. Please check SMS and Email.", "user_id": new_user.id}
 
     except Exception as e:
-        # Rollback SQL and Mongo if OTP sending fails
-        auth_service.delete_user(neon_db, new_user.id) # Assuming you add this to auth_service
+        auth_service.delete_user(neon_db, new_user.id) 
         await mongo_db.otps.delete_many({"user_id": new_user.id})
-        raise HTTPException(status_code=500, detail="Registration failed. Please try again later.")
+        raise HTTPException(status_code=500, detail="Registration failed.")
 
 @router.post("/google", response_model=Token)
 async def google_login(
     payload: GoogleLoginRequest,
-    neon_db: Session = Depends(get_neon_db)
+    neon_db: Session = Depends(get_db) # Fixed name
 ):
     try:
         id_info = id_token.verify_oauth2_token(
@@ -110,18 +108,17 @@ async def google_login(
 @router.post("/verify-otp")
 async def verify_otp(
     payload: OTPVerify,
-    neon_db: Session = Depends(get_neon_db),
-    mongo_db=Depends(get_mongo_db)
+    neon_db: Session = Depends(get_db), # Fixed name
+    mongo_db = Depends(get_mongo_db)
 ):
     record = await mongo_db.otps.find_one({"user_id": payload.user_id})
     
     if not record:
         raise HTTPException(status_code=400, detail="OTP invalid or does not exist.")
 
-    # Time expiration check
     time_elapsed = datetime.now(timezone.utc) - record.get("createdAt").replace(tzinfo=timezone.utc)
     if time_elapsed > timedelta(minutes=OTP_EXPIRATION_MINUTES):
-        raise HTTPException(status_code=400, detail="OTP has expired. Please request a new one.")
+        raise HTTPException(status_code=400, detail="OTP has expired.")
 
     if payload.verification_type == "sms" and payload.otp_code == record.get('sms_otp'):
         auth_service.update_verification_status(neon_db, payload.user_id, "sms")
@@ -136,7 +133,7 @@ async def verify_otp(
 @router.post("/login", response_model=Token)
 async def login(
     user_credentials: UserLogin,
-    neon_db: Session = Depends(get_neon_db)
+    neon_db: Session = Depends(get_db) # Fixed name
 ):
     user = auth_service.get_user_by_email(neon_db, user_credentials.email)
     if not user or not user.hashed_password or not verify_password(user_credentials.password, user.hashed_password):
@@ -157,12 +154,11 @@ async def login(
 @router.post("/forgot-password")
 async def forgot_password(
     payload: ForgotPassword,
-    neon_db: Session = Depends(get_neon_db),
+    neon_db: Session = Depends(get_db), # Fixed name
     mongo_db = Depends(get_mongo_db)
 ):
     user = auth_service.get_user_by_email(neon_db, payload.email)
     if not user:
-        # Return success even if user doesn't exist to prevent email enumeration attacks
         return {"message": "If the email exists, a reset code has been sent."}
 
     reset_otp = str(random.randint(100000, 999999))
@@ -177,15 +173,13 @@ async def forgot_password(
         return {"message": "If the email exists, a reset code has been sent."}
     except Exception as e:
         await mongo_db.password_resets.delete_many({"email": user.email, "reset_otp": reset_otp})
-        raise HTTPException(status_code=500, detail="Failed to send reset email. Please try again later.")
+        raise HTTPException(status_code=500, detail="Failed to send reset email.")
 
-# --- NEW ROUTE: Strictly verifies the reset code before allowing the user to change their password ---
 @router.post("/verify-reset-otp")
 async def verify_reset_otp(
     payload: VerifyResetOTPRequest,
     mongo_db = Depends(get_mongo_db)
 ):
-    # Find the most recent OTP for this email
     record = await mongo_db.password_resets.find_one(
         {"email": payload.email},
         sort=[("createdAt", -1)]
@@ -194,10 +188,9 @@ async def verify_reset_otp(
     if not record or record.get('reset_otp') != payload.otp_code:
         raise HTTPException(status_code=400, detail="Invalid reset code.")
 
-    # Time expiration check
     time_elapsed = datetime.now(timezone.utc) - record.get("createdAt").replace(tzinfo=timezone.utc)
     if time_elapsed > timedelta(minutes=OTP_EXPIRATION_MINUTES):
-        raise HTTPException(status_code=400, detail="Reset code has expired. Please request a new one.")
+        raise HTTPException(status_code=400, detail="Reset code has expired.")
 
     return {"message": "OTP verified successfully."}
 
@@ -205,7 +198,7 @@ async def verify_reset_otp(
 @router.post("/reset-password")
 async def reset_password(
     payload: ResetPassword,
-    neon_db: Session = Depends(get_neon_db),
+    neon_db: Session = Depends(get_db), # Fixed name
     mongo_db = Depends(get_mongo_db)
 ):
     record = await mongo_db.password_resets.find_one(
@@ -216,10 +209,9 @@ async def reset_password(
     if not record:
         raise HTTPException(status_code=400, detail="Invalid or expired OTP.")
 
-    # Time expiration check
     time_elapsed = datetime.now(timezone.utc) - record.get("createdAt").replace(tzinfo=timezone.utc)
     if time_elapsed > timedelta(minutes=OTP_EXPIRATION_MINUTES):
-        raise HTTPException(status_code=400, detail="Reset code has expired. Please request a new one.")
+        raise HTTPException(status_code=400, detail="Reset code has expired.")
 
     if record.get('reset_otp') != payload.otp_code:
         raise HTTPException(status_code=400, detail="Invalid OTP.")
@@ -236,11 +228,11 @@ async def reset_password(
 @router.post("/request-otp")
 async def request_otp(
     current_user: User = Depends(get_current_user),
-    neon_db: Session = Depends(get_neon_db),
+    neon_db: Session = Depends(get_db), # Fixed name
     mongo_db = Depends(get_mongo_db)
 ):
     if not current_user.phone:
-        raise HTTPException(status_code=400, detail="No phone number found. Please update your profile first.")
+        raise HTTPException(status_code=400, detail="No phone number found.")
 
     new_otp = str(random.randint(100000, 999999))
 
@@ -257,20 +249,18 @@ async def request_otp(
         send_sms_otp(current_user.phone, new_otp)
         return {"message": f"OTP sent successfully to {current_user.phone}"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Failed to send SMS. Please try again later.")
+        raise HTTPException(status_code=500, detail="Failed to send SMS.")
 
 
 @router.post("/change-password")
 async def change_password(
     payload: ChangePasswordRequest,
     current_user: User = Depends(get_current_user),
-    neon_db: Session = Depends(get_neon_db)
+    neon_db: Session = Depends(get_db) # Fixed name
 ):
-    # 1. Verify the current password they typed matches what is stored in the database
     if not current_user.hashed_password or not verify_password(payload.current_password, current_user.hashed_password):
         raise HTTPException(status_code=400, detail="Incorrect current password.")
 
-    # 2. Update the password (this hashes the new password and saves it to NeonDB)
     auth_service.update_password(neon_db, current_user.id, payload.new_password)
     
     return {"message": "Password updated successfully."}
