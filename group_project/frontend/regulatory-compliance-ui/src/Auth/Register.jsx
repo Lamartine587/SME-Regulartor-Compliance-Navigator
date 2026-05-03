@@ -16,6 +16,7 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPasswordError, setShowPasswordError] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const validatePhone = (phone) => /^\+254\d{9}$/.test(phone);
@@ -69,6 +70,7 @@ export default function Register() {
     if (!validatePhone(phone)) return setError("Phone must be exactly 9 digits after the 254 country code.");
     if (!passwordValid) return setError("Password must include: " + failedRules.join(", "));
     if (password !== confirmPassword) return setError("Passwords do not match.");
+    if (!termsAccepted) return setError("You must accept the Terms of Use and Privacy Policy.");
 
     setLoading(true);
     try {
@@ -126,6 +128,19 @@ export default function Register() {
               {showConfirmPassword ? <EyeSlashIcon className="h-4 w-4"/> : <EyeIcon className ="h-4 w-4"/>}
             </button>
           </div>
+        </div>
+
+        <div className="flex items-start space-x-3 pt-1">
+          <input 
+            type="checkbox" 
+            id="terms"
+            checked={termsAccepted}
+            onChange={(e) => setTermsAccepted(e.target.checked)}
+            className="mt-1 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+          />
+          <label htmlFor="terms" className="text-[11px] text-slate-600 dark:text-slate-400 font-medium leading-relaxed">
+            I agree to the <button type="button" onClick={() => navigate('/terms-of-use')} className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline">Terms of Use</button> and <button type="button" onClick={() => navigate('/privacy-policy')} className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline">Privacy Policy</button>.
+          </label>
         </div>
 
         {password && !passwordValid && showPasswordError && (
