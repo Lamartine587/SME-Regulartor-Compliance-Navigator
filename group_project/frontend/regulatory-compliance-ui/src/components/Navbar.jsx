@@ -17,7 +17,7 @@ export default function Navbar() {
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   
   // Added 'role' to the user state (default to Customer)
-  const [user, setUser] = useState({ name: "SME User", initials: "SU", role: "Customer" });
+  const [user, setUser] = useState({ name: "SME User", initials: "DCU", role: "Customer" });
   
   // Notification states
   const [notifications, setNotifications] = useState([]);

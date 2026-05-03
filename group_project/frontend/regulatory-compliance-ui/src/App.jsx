@@ -23,6 +23,8 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Transactions from './pages/Transactions';
 import PersonalVault from './pages/PersonalVault';
 
+import Information from "./pages/PermitRequirements"
+
 function App() {
   return (
     <ThemeProvider>
@@ -53,6 +55,9 @@ function App() {
           {/* Profile & Settings */}
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+
+          {/*More infor for users */}
+          <Route path="/info" element={<ProtectedRoute><Information /></ProtectedRoute>} />
 
           {/* Admin Routes */}
           <Route element={<AdminRoute />}>

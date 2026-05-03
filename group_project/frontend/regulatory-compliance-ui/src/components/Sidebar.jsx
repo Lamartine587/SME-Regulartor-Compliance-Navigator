@@ -13,7 +13,8 @@ import {
   ShieldCheckIcon,
   BugAntIcon,
   BanknotesIcon,
-  IdentificationIcon // Added for Personal IDs
+  IdentificationIcon,
+  DocumentTextIcon
 } from "@heroicons/react/24/outline";
 
 export default function Sidebar() {
@@ -25,12 +26,13 @@ export default function Sidebar() {
 
   const menuItems = [
     { path: "/dashboard", label: "Dashboard", icon: HomeIcon },
-    { path: "/documents", label: "All Documents", icon: FolderIcon }, // Global Vault
+    { path: "/documents", label: "All Documents", icon: FolderIcon },
     { path: "/permits", label: "Business Permits", icon: ClipboardDocumentCheckIcon },
-    { path: "/personal", label: "Personal IDs", icon: IdentificationIcon }, // Distinct Icon
+    { path: "/personal", label: "Personal IDs", icon: IdentificationIcon },
     { path: "/transactions", label: "Financial Ledger", icon: BanknotesIcon },
     { path: "/reminders", label: "Alert Hub", icon: BellIcon },
-    { path: "/profile", label: "Profile Settings", icon: UserCircleIcon }, 
+    { path: "/profile", label: "Profile Settings", icon: UserCircleIcon },
+    { path: "/info", label: "More Info", icon: DocumentTextIcon}, 
   ];
 
   const isActive = (path) => location.pathname === path;
